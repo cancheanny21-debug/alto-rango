@@ -97,48 +97,69 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { seedClients, seedPlans } from '../data/seed'
+import { useGymStore } from '../stores/gym'
 import { useToastStore } from '../stores/toast'
+const gym = useGymStore()
 const toast = useToastStore()
 
-const clients = ref([...seedClients])
 const search = ref('')
 const filter = ref('Todos')
 const showModal = ref(false)
 const showDetail = ref(false)
 const editing = ref(null)
 const detailClient = ref({})
-const plans = seedPlans.map(p => p.name)
+const plans = computed(() => gym.plans.map(p => p.name))
 
-const emptyForm = { name: '', email: '', phone: '', plan: plans[0], weight: 70, height: 170 }
+const emptyForm = { name: '', email: '', phone: '', plan: 'Mensual', weight: 70, height: 170 }
 const form = ref({ ...emptyForm })
 
 const filtered = computed(() => {
-  let list = clients.value
+  let list = gym.clients
   if (filter.value === 'Activos') list = list.filter(c => c.status === 'active')
-  else if (filter.value === 'Vencidos') list = list.filter(c => c.status === 'expired')
+  else if (filter.value === 'Vencidos') list = list.filter(c => c.status === 'expired' || c.status === 'completed')
   else if (filter.value === 'Congelados') list = list.filter(c => c.status === 'frozen')
   if (search.value) { const s = search.value.toLowerCase(); list = list.filter(c => c.name.toLowerCase().includes(s) || c.email.toLowerCase().includes(s)) }
   return list
 })
 
-function statusClass(s) { return s === 'active' ? 'badge-success' : s === 'expired' ? 'badge-danger' : 'badge-warning' }
-function statusLabel(s) { return s === 'active' ? 'Activo' : s === 'expired' ? 'Vencido' : 'Congelado' }
+function statusClass(s) { return s === 'active' ? 'badge-success' : (s === 'expired' || s === 'completed') ? 'badge-danger' : 'badge-warning' }
+function statusLabel(s) { return { active: 'Activo', expired: 'Vencido', frozen: 'Congelado', completed: 'Cumplido' }[s] || s }
 
 function viewClient(c) { detailClient.value = c; showDetail.value = true }
 function editClient(c) { editing.value = c.id; form.value = { ...c }; showModal.value = true }
-function deleteClient(id) { clients.value = clients.value.filter(c => c.id !== id); toast.success('Cliente eliminado') }
+function deleteClient(id) {
+  gym.deleteClient(id)
+  toast.success('Cliente eliminado')
+}
 
 function saveClient() {
   if (editing.value) {
-    const idx = clients.value.findIndex(c => c.id === editing.value)
-    if (idx >= 0) clients.value[idx] = { ...clients.value[idx], ...form.value }
+    const idx = gym.clients.findIndex(c => c.id === editing.value)
+    if (idx >= 0) {
+      const planChanged = gym.clients[idx].plan !== form.value.plan
+      gym.clients[idx] = { ...gym.clients[idx], ...form.value }
+      if (planChanged) gym.changeClientPlan(editing.value, form.value.plan, { registerPayment: false })
+    }
     toast.success('Cliente actualizado')
   } else {
-    const newC = { ...form.value, id: Date.now(), status: 'active', photo: '👤', planEnd: '2026-07-01', bmi: (form.value.weight / ((form.value.height / 100) ** 2)).toFixed(1), joinDate: new Date().toISOString().split('T')[0], visits: 0 }
-    clients.value.unshift(newC)
+    const plan = gym.getPlanByName(form.value.plan)
+    const end = new Date()
+    end.setDate(end.getDate() + (plan?.duration === 999 ? 365 : (plan?.duration || 30)))
+    const newC = {
+      ...form.value,
+      id: Date.now(),
+      status: 'active',
+      photo: '👤',
+      planEnd: end.toISOString().split('T')[0],
+      bmi: +(form.value.weight / ((form.value.height / 100) ** 2)).toFixed(1),
+      joinDate: new Date().toISOString().split('T')[0],
+      visits: 0,
+      visitsRemaining: plan?.limit || null,
+    }
+    gym.clients.unshift(newC)
     toast.success('Cliente registrado')
   }
+  gym.saveClients()
   showModal.value = false; editing.value = null; form.value = { ...emptyForm }
 }
 </script>

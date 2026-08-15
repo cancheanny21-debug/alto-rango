@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="page-header">
-      <div><h1>🛍️ Tienda</h1><p class="page-subtitle">Productos deportivos y suplementos</p></div>
+      <div><h1>🛍️ Módulo de Ventas</h1><p class="page-subtitle">Registro de ventas · Alto Rango Suplementos</p></div>
       <router-link to="/carrito" class="btn btn-primary">🛒 Carrito ({{ cart.totalItems }})</router-link>
     </div>
 
@@ -37,10 +37,11 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { seedProducts } from '../data/seed'
+import { useGymStore } from '../stores/gym'
 import { useCartStore } from '../stores/cart'
 import { useToastStore } from '../stores/toast'
 
+const gym = useGymStore()
 const cart = useCartStore()
 const toast = useToastStore()
 const search = ref('')
@@ -48,7 +49,7 @@ const category = ref('Todos')
 const categories = ['Todos', 'Bebidas', 'Suplementos', 'Snacks']
 
 const filtered = computed(() => {
-  let list = seedProducts
+  let list = gym.products
   if (category.value !== 'Todos') list = list.filter(p => p.category === category.value)
   if (search.value) { const s = search.value.toLowerCase(); list = list.filter(p => p.name.toLowerCase().includes(s)) }
   return list

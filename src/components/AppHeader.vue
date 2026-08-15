@@ -3,16 +3,30 @@
     <div class="header-left">
       <button class="btn-icon header-menu-btn" @click="$emit('toggle-sidebar')">☰</button>
       <div class="header-greeting">
-        <h2>{{ greeting }}, {{ auth.userName }} 👋</h2>
-        <p class="header-sub">{{ auth.gymName }} · {{ today }}</p>
+        <h2>{{ greeting }}, {{ auth.userName }}</h2>
+        <p class="header-sub">{{ auth.gymName }} · {{ auth.userRoleLabel }} · {{ today }}</p>
       </div>
     </div>
     <div class="header-right">
-      <button class="header-cart btn-icon" style="background: none; border: none; cursor: pointer; margin-right: 8px;" @click="showToast('Notificaciones recientes')">
-        🔔
-        <span class="cart-count" style="background: var(--danger)">2</span>
-      </button>
-      <router-link to="/tienda" class="header-cart btn-icon" id="header-cart-btn">
+      <div class="notif-wrap">
+        <button class="header-cart btn-icon" style="background: none; border: none; cursor: pointer;" @click="toggleNotifs">
+          🔔
+          <span v-if="gym.unreadNotifications" class="cart-count" style="background: var(--danger)">{{ gym.unreadNotifications }}</span>
+        </button>
+        <div v-if="showNotifs" class="notif-panel">
+          <div class="notif-head">
+            <strong>Notificaciones</strong>
+            <button class="btn-icon" style="font-size:0.8rem" @click="gym.markNotificationsRead()">Marcar leídas</button>
+          </div>
+          <div v-if="!gym.notifications.length" class="notif-empty">Sin notificaciones</div>
+          <div v-for="n in gym.notifications.slice(0, 8)" :key="n.id" class="notif-item" :class="{ unread: !n.read }">
+            <strong>{{ n.title }}</strong>
+            <p>{{ n.message }}</p>
+            <small v-if="n.detail">{{ n.detail }}</small>
+          </div>
+        </div>
+      </div>
+      <router-link v-if="auth.canSell" to="/tienda" class="header-cart btn-icon" id="header-cart-btn">
         🛒
         <span v-if="cart.totalItems" class="cart-count">{{ cart.totalItems }}</span>
       </router-link>
@@ -22,18 +36,28 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
-import { useToastStore } from '../stores/toast'
+import { useGymStore } from '../stores/gym'
+
+defineEmits(['toggle-sidebar'])
 
 const auth = useAuthStore()
 const cart = useCartStore()
-const toast = useToastStore()
+const gym = useGymStore()
+const showNotifs = ref(false)
 
-function showToast(msg) {
-  toast.info(msg)
+function toggleNotifs() {
+  showNotifs.value = !showNotifs.value
 }
+
+function onDocClick(e) {
+  if (!e.target.closest('.notif-wrap')) showNotifs.value = false
+}
+
+onMounted(() => document.addEventListener('click', onDocClick))
+onUnmounted(() => document.removeEventListener('click', onDocClick))
 
 const greeting = computed(() => {
   const h = new Date().getHours()
@@ -68,6 +92,19 @@ const today = computed(() => new Date().toLocaleDateString('es-EC', { weekday: '
   min-width: 18px; height: 18px;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
 }
+.notif-wrap { position: relative; }
+.notif-panel {
+  position: absolute; right: 0; top: 42px; width: 320px; max-height: 360px; overflow-y: auto;
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 8px;
+  z-index: 60;
+}
+.notif-head { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid var(--border-color); }
+.notif-empty { padding: 16px; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+.notif-item { padding: 10px 8px; border-bottom: 1px solid var(--border-color); font-size: 0.82rem; }
+.notif-item.unread { background: rgba(59,130,246,0.08); }
+.notif-item p { color: var(--text-secondary); margin-top: 2px; }
+.notif-item small { color: var(--text-muted); }
 
 @media (max-width: 768px) {
   .app-header { left: 0; padding: 0 16px; }

@@ -47,36 +47,41 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { Chart, registerables } from 'chart.js'
-import { monthlyRevenue, weeklyAttendance, seedClients, seedProducts } from '../data/seed'
+import { monthlyRevenue, weeklyAttendance } from '../data/seed'
+import { useGymStore } from '../stores/gym'
 Chart.register(...registerables)
 
+const gym = useGymStore()
 const revenueChart = ref(null)
 const attendanceChart = ref(null)
 
-const activeClients = seedClients.filter(c => c.status === 'active').length
-const stats = [
-  { icon: '👥', label: 'Clientes Activos', value: activeClients, change: '↑ 12% vs mes anterior', changeColor: '#10b981', bg: 'rgba(59,130,246,0.15)' },
-  { icon: '💰', label: 'Ingresos del Mes', value: '$6,800', change: '↑ 8% vs mes anterior', changeColor: '#10b981', bg: 'rgba(6,182,212,0.15)' },
-  { icon: '💳', label: 'Membresías por Vencer', value: '5', change: 'Próximos 7 días', changeColor: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
-  { icon: '🛍️', label: 'Ventas Tienda (Mes)', value: '$1,240', change: '↑ 15% vs mes anterior', changeColor: '#10b981', bg: 'rgba(139,92,246,0.15)' },
-]
+const activeClients = computed(() => gym.clients.filter(c => c.status === 'active').length)
+const stats = computed(() => [
+  { icon: '👥', label: 'Clientes Activos', value: activeClients.value, change: '↑ 12% vs mes anterior', changeColor: '#10b981', bg: 'rgba(59,130,246,0.15)' },
+  { icon: '💰', label: 'Cobros Membresías', value: '$' + gym.payments.reduce((s, p) => s + p.amount, 0).toFixed(0), change: 'Historial de cobros', changeColor: '#10b981', bg: 'rgba(6,182,212,0.15)' },
+  { icon: '💳', label: 'Membresías Inactivas', value: String(gym.clients.filter(c => c.status !== 'active').length), change: 'Vencidas / congeladas / cumplidas', changeColor: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
+  { icon: '🛍️', label: 'Ventas Tienda', value: '$' + gym.sales.reduce((s, p) => s + p.total, 0).toFixed(0), change: 'Total histórico demo', changeColor: '#10b981', bg: 'rgba(139,92,246,0.15)' },
+])
 
 const recentActivity = [
   { id: 1, icon: '✅', text: 'Carlos Mendoza registró asistencia', time: 'Hace 10 min' },
-  { id: 2, icon: '🛒', text: 'María López compró Whey Protein', time: 'Hace 25 min' },
-  { id: 3, icon: '💳', text: 'Andrés Torres renovó membresía Anual', time: 'Hace 1 hora' },
+  { id: 2, icon: '🛒', text: 'María López compró Proteína Pura', time: 'Hace 25 min' },
+  { id: 3, icon: '💳', text: 'Diego Herrera renovó Pospago por Tarjeta', time: 'Hace 1 hora' },
   { id: 4, icon: '👤', text: 'Nuevo cliente: Luciana Medina', time: 'Hace 2 horas' },
   { id: 5, icon: '📅', text: 'Clase CrossFit completada (12 asist.)', time: 'Hace 3 horas' },
 ]
 
-const alerts = [
-  { id: 1, type: 'warning', icon: '⚠️', text: '3 membresías vencen esta semana' },
-  { id: 2, type: 'danger', icon: '📦', text: 'Stock bajo: Cinturón de Fuerza (15 uds)' },
-  { id: 3, type: 'info', icon: '💡', text: 'Clase Spinning Power llena al 100%' },
-  { id: 4, type: 'warning', icon: '💰', text: '2 pagos pendientes por cobrar' },
-]
+const alerts = computed(() => {
+  const low = gym.products.filter(p => p.stock < 20)
+  return [
+    { id: 1, type: 'warning', icon: '⚠️', text: `${gym.clients.filter(c => c.status === 'expired').length} membresías vencidas` },
+    { id: 2, type: 'danger', icon: '📦', text: low.length ? `Stock bajo: ${low[0].name} (${low[0].stock} uds)` : 'Inventario de productos OK' },
+    { id: 3, type: 'info', icon: '🚪', text: gym.accessControlEnabled ? 'Control de acceso activo' : 'Control de acceso desactivado' },
+    { id: 4, type: 'warning', icon: '💳', text: `Pospago: ${gym.clients.find(c => c.plan === 'Pospago por Tarjeta')?.visitsRemaining ?? 0} asistencias restantes` },
+  ]
+})
 
 onMounted(() => {
   const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']

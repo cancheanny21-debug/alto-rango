@@ -38,13 +38,15 @@
 <script setup>
 import { ref, watch, nextTick, onMounted } from 'vue'
 import { Chart, registerables } from 'chart.js'
-import { monthlyRevenue, monthlyMembers, weeklyAttendance, seedProducts } from '../data/seed'
+import { monthlyRevenue, monthlyMembers, weeklyAttendance } from '../data/seed'
+import { useGymStore } from '../stores/gym'
+const gymStore = useGymStore()
 Chart.register(...registerables)
 
 const tabs = ['Ingresos', 'Clientes', 'Ventas Tienda', 'Asistencia']
 const activeTab = ref('Ingresos')
 const revenueRef = ref(null); const membersRef = ref(null); const attendRef = ref(null)
-const topProducts = [...seedProducts].sort((a, b) => b.sold - a.sold).slice(0, 8)
+const topProducts = [...gymStore.products].sort((a, b) => b.sold - a.sold).slice(0, 8)
 const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 const opts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(59,130,246,0.06)' }, ticks: { color: '#64748b' } }, y: { grid: { color: 'rgba(59,130,246,0.06)' }, ticks: { color: '#64748b' } } } }
 let charts = {}

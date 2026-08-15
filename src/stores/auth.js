@@ -1,73 +1,207 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
+const DEFAULT_USERS = [
+  { id: 1, name: 'Ana Martínez', email: 'admin@altorango.com', password: 'admin123', role: 'admin', status: 'active', avatar: 'AM', lastLogin: '2026-08-15 07:30', createdAt: '2024-03-20' },
+  { id: 2, name: 'Luis Paredes', email: 'empleado@altorango.com', password: 'empleado123', role: 'empleado', status: 'active', avatar: 'LP', lastLogin: '2026-08-14 18:00', createdAt: '2025-01-10' },
+  { id: 3, name: 'Carlos Mendoza', email: 'usuario@altorango.com', password: 'usuario123', role: 'usuario', status: 'active', avatar: 'CM', lastLogin: '2026-08-13 09:00', createdAt: '2025-03-10', clientId: 1 },
+]
+
+const DEFAULT_GYM = {
+  id: 1,
+  name: 'Alto Rango Gym',
+  logo: '💪',
+  currency: 'USD',
+  phone: '+593 999 000 111',
+  address: 'Av. Principal 123',
+  city: 'Quito',
+  email: 'info@altorango.com',
+  website: 'www.altorango.com',
+}
+
+const ROLE_LABELS = {
+  admin: 'Administrador',
+  empleado: 'Empleado/Encargado',
+  usuario: 'Usuario',
+}
+
+const LEGACY_ROLE_MAP = {
+  superadmin: 'admin',
+  administrador: 'admin',
+  Administrador: 'admin',
+  receptionist: 'empleado',
+  recepcionista: 'empleado',
+  trainer: 'empleado',
+  entrenador: 'empleado',
+  employee: 'empleado',
+  manager: 'empleado',
+  user: 'usuario',
+  cliente: 'usuario',
+}
+
+function initials(name) {
+  return (name || 'U').split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()
+}
+
+function normalizeRole(role) {
+  if (!role) return null
+  if (['admin', 'empleado', 'usuario'].includes(role)) return role
+  return LEGACY_ROLE_MAP[role] || null
+}
+
+function migrateUsers(raw) {
+  if (!Array.isArray(raw) || !raw.length) return DEFAULT_USERS
+  const migrated = raw.map(u => {
+    const role = normalizeRole(u.role)
+    if (!role) return null
+    return {
+      ...u,
+      role,
+      password: u.password || 'cambiar123',
+      status: u.status || 'active',
+      avatar: u.avatar || initials(u.name),
+    }
+  }).filter(Boolean)
+
+  // Si no hay ningún admin demo usable, restaurar defaults
+  const hasValid = migrated.some(u => u.email && u.password && ['admin', 'empleado', 'usuario'].includes(u.role))
+  if (!hasValid) return DEFAULT_USERS
+
+  // Asegurar que existan las 3 cuentas demo
+  const emails = new Set(migrated.map(u => u.email.toLowerCase()))
+  DEFAULT_USERS.forEach(demo => {
+    if (!emails.has(demo.email.toLowerCase())) migrated.push({ ...demo })
+  })
+  return migrated
+}
+
+function migrateSessionUser(raw) {
+  if (!raw) return null
+  const role = normalizeRole(raw.role)
+  if (!role) return null
+  return {
+    ...raw,
+    role,
+    position: ROLE_LABELS[role],
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref(JSON.parse(localStorage.getItem('gym_user') || 'null'))
-  const gym = ref(JSON.parse(localStorage.getItem('gym_info') || 'null'))
+  let initialUser = null
+  try {
+    initialUser = migrateSessionUser(JSON.parse(localStorage.getItem('gym_user') || 'null'))
+  } catch { initialUser = null }
+  if (initialUser) localStorage.setItem('gym_user', JSON.stringify(initialUser))
+  else localStorage.removeItem('gym_user')
+
+  let initialGym = DEFAULT_GYM
+  try {
+    const g = JSON.parse(localStorage.getItem('gym_info') || 'null')
+    if (g) {
+      initialGym = { ...DEFAULT_GYM, ...g, name: g.name?.includes('PowerFit') || g.name === 'GymPro' ? DEFAULT_GYM.name : (g.name || DEFAULT_GYM.name) }
+    }
+  } catch { /* keep default */ }
+  localStorage.setItem('gym_info', JSON.stringify(initialGym))
+
+  let initialUsers = DEFAULT_USERS
+  try {
+    initialUsers = migrateUsers(JSON.parse(localStorage.getItem('gym_system_users') || 'null'))
+  } catch { initialUsers = DEFAULT_USERS }
+  localStorage.setItem('gym_system_users', JSON.stringify(initialUsers))
+
+  const user = ref(initialUser)
+  const gym = ref(initialGym)
+  const systemUsers = ref(initialUsers)
 
   const isAuthenticated = computed(() => !!user.value)
   const userName = computed(() => user.value?.name || '')
   const userRole = computed(() => user.value?.role || '')
-  const gymName = computed(() => gym.value?.name || 'GymPro')
-  const isSuperAdmin = computed(() => user.value?.role === 'superadmin')
-  const isAdmin = computed(() => user.value?.role === 'admin' || isSuperAdmin.value)
-
-  // Usuarios del sistema (demo)
-  const systemUsers = ref(JSON.parse(localStorage.getItem('gym_system_users') || JSON.stringify([
-    { id: 1, name: 'Carlos Ruiz', email: 'superadmin@gympro.com', role: 'superadmin', status: 'active', avatar: 'CR', lastLogin: '2026-05-29 07:30', createdAt: '2024-01-15' },
-    { id: 2, name: 'Ana Martínez', email: 'admin@powerfitgym.com', role: 'admin', status: 'active', avatar: 'AM', lastLogin: '2026-05-29 06:45', gym: 'PowerFit Gym', createdAt: '2024-03-20' },
-    { id: 3, name: 'Luis Paredes', email: 'recepcion@powerfitgym.com', role: 'receptionist', status: 'active', avatar: 'LP', lastLogin: '2026-05-28 18:00', gym: 'PowerFit Gym', createdAt: '2025-01-10' },
-    { id: 4, name: 'Roberto Silva', email: 'roberto@powerfitgym.com', role: 'trainer', status: 'active', avatar: 'RS', lastLogin: '2026-05-29 06:00', gym: 'PowerFit Gym', createdAt: '2025-02-14' },
-    { id: 5, name: 'María López', email: 'admin@ironfit.com', role: 'admin', status: 'active', avatar: 'ML', lastLogin: '2026-05-28 10:30', gym: 'IronFit Centro', createdAt: '2025-06-01' },
-    { id: 6, name: 'Pedro Gómez', email: 'pedro@ironfit.com', role: 'receptionist', status: 'inactive', avatar: 'PG', lastLogin: '2026-04-15 09:00', gym: 'IronFit Centro', createdAt: '2025-07-20' },
-  ])))
-
-  // Gimnasios registrados (demo multi-tenant)
-  const registeredGyms = ref(JSON.parse(localStorage.getItem('gym_registered_gyms') || JSON.stringify([
-    { id: 1, name: 'PowerFit Gym', slug: 'powerfit', owner: 'Ana Martínez', plan: 'Profesional', status: 'active', members: 185, revenue: 6800, city: 'Quito', createdAt: '2024-03-20', expiresAt: '2027-03-20' },
-    { id: 2, name: 'IronFit Centro', slug: 'ironfit', owner: 'María López', plan: 'Básico', status: 'active', members: 90, revenue: 2800, city: 'Guayaquil', createdAt: '2025-06-01', expiresAt: '2026-06-01' },
-    { id: 3, name: 'CrossBox Elite', slug: 'crossbox', owner: 'Juan Vera', plan: 'Enterprise', status: 'active', members: 320, revenue: 14500, city: 'Cuenca', createdAt: '2024-08-15', expiresAt: '2027-08-15' },
-    { id: 4, name: 'Flex Studio', slug: 'flexstudio', owner: 'Laura Díaz', plan: 'Profesional', status: 'suspended', members: 45, revenue: 0, city: 'Ambato', createdAt: '2025-09-10', expiresAt: '2026-03-10' },
-  ])))
+  const userRoleLabel = computed(() => ROLE_LABELS[user.value?.role] || user.value?.role || '')
+  const gymName = computed(() => gym.value?.name || 'Alto Rango Gym')
+  const isAdmin = computed(() => user.value?.role === 'admin')
+  const isEmpleado = computed(() => user.value?.role === 'empleado')
+  const isUsuario = computed(() => user.value?.role === 'usuario')
+  const canManageUsers = computed(() => isAdmin.value)
+  const canManagePlans = computed(() => isAdmin.value)
+  const canSell = computed(() => isAdmin.value || isEmpleado.value)
+  const canAccessControl = computed(() => isAdmin.value || isEmpleado.value)
 
   function login(email, password) {
-    if (email && password) {
-      // Si es superadmin@gympro.com → SuperAdmin
-      const isSA = email.toLowerCase().includes('superadmin')
-      const u = isSA
-        ? { id: 1, name: 'Carlos Ruiz', email, role: 'superadmin', avatar: 'CR', phone: '+593 999 888 777', position: 'Super Administrador', department: 'Dirección General' }
-        : { id: 2, name: 'Ana Martínez', email, role: 'admin', avatar: 'AM', phone: '+593 999 000 111', position: 'Administradora', department: 'Operaciones' }
-      const g = { id: 1, name: 'PowerFit Gym', logo: '💪', currency: 'USD', phone: '+593 999 000 111', address: 'Av. Principal 123', city: 'Quito' }
-      user.value = u
-      gym.value = g
-      localStorage.setItem('gym_user', JSON.stringify(u))
-      localStorage.setItem('gym_info', JSON.stringify(g))
-      return true
+    if (!email || !password) return false
+    const emailNorm = email.toLowerCase().trim()
+    const found = systemUsers.value.find(
+      u => u.email.toLowerCase() === emailNorm && u.password === password && u.status === 'active'
+    )
+    if (!found) return false
+
+    const role = normalizeRole(found.role) || 'usuario'
+    const u = {
+      id: found.id,
+      name: found.name,
+      email: found.email,
+      role,
+      avatar: found.avatar || initials(found.name),
+      clientId: found.clientId || null,
+      phone: found.phone || '',
+      position: ROLE_LABELS[role],
     }
-    return false
+    found.lastLogin = new Date().toISOString().slice(0, 16).replace('T', ' ')
+    found.role = role
+    saveUsers()
+
+    user.value = u
+    if (!gym.value?.name) gym.value = { ...DEFAULT_GYM }
+    localStorage.setItem('gym_user', JSON.stringify(u))
+    localStorage.setItem('gym_info', JSON.stringify(gym.value))
+    return true
   }
 
   function logout() {
     user.value = null
-    gym.value = null
     localStorage.removeItem('gym_user')
-    localStorage.removeItem('gym_info')
   }
 
-  function saveUsers() { localStorage.setItem('gym_system_users', JSON.stringify(systemUsers.value)) }
-  function saveGyms() { localStorage.setItem('gym_registered_gyms', JSON.stringify(registeredGyms.value)) }
+  function saveUsers() {
+    localStorage.setItem('gym_system_users', JSON.stringify(systemUsers.value))
+  }
+
+  function saveGym(data) {
+    gym.value = { ...gym.value, ...data }
+    localStorage.setItem('gym_info', JSON.stringify(gym.value))
+  }
 
   function addUser(userData) {
-    systemUsers.value.push({ ...userData, id: Date.now(), status: 'active', lastLogin: 'Nunca', createdAt: new Date().toISOString().split('T')[0] })
+    const role = normalizeRole(userData.role) || 'empleado'
+    const avatar = initials(userData.name)
+    systemUsers.value.push({
+      ...userData,
+      role,
+      id: Date.now(),
+      status: userData.status || 'active',
+      avatar,
+      lastLogin: 'Nunca',
+      createdAt: new Date().toISOString().split('T')[0],
+      password: userData.password || 'cambiar123',
+    })
     saveUsers()
   }
+
   function updateUser(id, data) {
     const idx = systemUsers.value.findIndex(u => u.id === id)
-    if (idx >= 0) { systemUsers.value[idx] = { ...systemUsers.value[idx], ...data }; saveUsers() }
+    if (idx >= 0) {
+      const patch = { ...data }
+      if (patch.role) patch.role = normalizeRole(patch.role) || systemUsers.value[idx].role
+      systemUsers.value[idx] = { ...systemUsers.value[idx], ...patch }
+      if (patch.name) systemUsers.value[idx].avatar = initials(patch.name)
+      saveUsers()
+    }
   }
+
   function deleteUser(id) {
+    if (user.value?.id === id) return false
     systemUsers.value = systemUsers.value.filter(u => u.id !== id)
     saveUsers()
+    return true
   }
 
   function updateProfile(data) {
@@ -75,9 +209,14 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('gym_user', JSON.stringify(user.value))
   }
 
+  function hasRole(...roles) {
+    return roles.includes(user.value?.role)
+  }
+
   return {
-    user, gym, isAuthenticated, userName, userRole, gymName, isSuperAdmin, isAdmin,
-    systemUsers, registeredGyms,
-    login, logout, addUser, updateUser, deleteUser, updateProfile, saveGyms
+    user, gym, isAuthenticated, userName, userRole, userRoleLabel, gymName,
+    isAdmin, isEmpleado, isUsuario, canManageUsers, canManagePlans, canSell, canAccessControl,
+    systemUsers, ROLE_LABELS,
+    login, logout, addUser, updateUser, deleteUser, updateProfile, saveGym, hasRole,
   }
 })

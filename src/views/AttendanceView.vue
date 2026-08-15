@@ -3,39 +3,66 @@
     <div class="page-header">
       <div>
         <h1>📋 Control de Asistencia</h1>
-        <p class="page-subtitle">Registro de entradas y salidas</p>
-        <div style="margin-top: 8px; padding: 8px 16px; border-radius: 8px; font-weight: bold; display: inline-block" 
-             :style="{ background: doorStatus === 'Abierta' ? '#dcfce7' : '#fee2e2', color: doorStatus === 'Abierta' ? '#166534' : '#991b1b' }">
-          🚪 Puerta: {{ doorStatus }}
+        <p class="page-subtitle">Acceso por membresía vigente · plan pospago 30 asistencias</p>
+        <div style="margin-top: 8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center">
+          <div style="padding: 8px 16px; border-radius: 8px; font-weight: bold; display: inline-block"
+               :style="{ background: doorStatus === 'Abierta' ? '#dcfce7' : '#fee2e2', color: doorStatus === 'Abierta' ? '#166534' : '#991b1b' }">
+            🚪 Puerta: {{ doorStatus }}
+          </div>
+          <span class="badge" :class="gym.accessControlEnabled ? 'badge-success' : 'badge-danger'">
+            Control: {{ gym.accessControlEnabled ? 'Activo' : 'Desactivado' }}
+          </span>
+          <button v-if="auth.canAccessControl" class="btn btn-secondary btn-sm" @click="toggleAccess">
+            {{ gym.accessControlEnabled ? 'Desactivar control' : 'Activar control' }}
+          </button>
         </div>
       </div>
-      <button class="btn btn-primary" @click="showCheckin = true">📱 Registrar Asistencia</button>
+      <button v-if="auth.canAccessControl || auth.isUsuario" class="btn btn-primary" @click="showCheckin = true">📱 Registrar Asistencia</button>
     </div>
+
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-icon" style="background:rgba(59,130,246,0.15)">📊</div><div class="stat-value">{{ todayCount }}</div><div class="stat-label">Asistencias Hoy</div></div>
-      <div class="stat-card"><div class="stat-icon" style="background:rgba(6,182,212,0.15)">🕐</div><div class="stat-value">07:00</div><div class="stat-label">Hora Pico</div></div>
-      <div class="stat-card"><div class="stat-icon" style="background:rgba(16,185,129,0.15)">📈</div><div class="stat-value">85%</div><div class="stat-label">Tasa de Asistencia</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(245,158,11,0.15)">💳</div><div class="stat-value">{{ pospagoLeft }}</div><div class="stat-label">Restantes Pospago (Diego)</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:rgba(16,185,129,0.15)">✅</div><div class="stat-value">{{ verifiedCount }}</div><div class="stat-label">Verificadas</div></div>
     </div>
+
     <div class="table-container">
       <table>
-        <thead><tr><th>Cliente</th><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Duración</th></tr></thead>
+        <thead><tr><th>Cliente</th><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Estado</th><th v-if="auth.canAccessControl">Acciones</th></tr></thead>
         <tbody>
-          <tr v-for="r in records" :key="r.id">
-            <td><strong>{{ r.client }}</strong></td><td>{{ r.date }}</td><td>{{ r.checkin }}</td><td>{{ r.checkout || '—' }}</td><td>{{ r.duration || 'En gimnasio' }}</td>
+          <tr v-for="r in gym.attendance" :key="r.id" :class="{ cancelled: r.status === 'cancelled' }">
+            <td><strong>{{ r.client }}</strong></td>
+            <td>{{ r.date }}</td>
+            <td>{{ r.checkin }}</td>
+            <td>{{ r.checkout || '—' }}</td>
+            <td>
+              <span class="badge" :class="r.status === 'verified' ? 'badge-success' : r.status === 'cancelled' ? 'badge-danger' : 'badge-warning'">
+                {{ r.status === 'verified' ? 'Verificada' : r.status === 'cancelled' ? 'Anulada' : 'Pendiente' }}
+              </span>
+            </td>
+            <td v-if="auth.canAccessControl">
+              <div style="display:flex;gap:6px" v-if="r.status !== 'cancelled'">
+                <button v-if="r.status !== 'verified'" class="btn btn-success btn-sm" @click="verify(r)">✓ Verificar</button>
+                <button class="btn btn-danger btn-sm" @click="cancel(r)">✕ Anular</button>
+              </div>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
+
     <div v-if="showCheckin" class="modal-overlay" @click.self="showCheckin = false">
       <div class="modal-content" style="text-align:center">
         <div class="modal-header"><h2>📱 Registrar Asistencia</h2><button class="btn-icon" @click="showCheckin = false">✕</button></div>
         <div style="font-size:5rem;margin:20px 0;animation:pulse 1.5s ease infinite">📷</div>
-        <p style="color:var(--text-muted);margin-bottom:16px">Escanea el código QR del cliente o selecciona manualmente</p>
-        <select v-model="selectedClient" style="margin-bottom:16px">
+        <p style="color:var(--text-muted);margin-bottom:16px">Solo se abre la puerta con membresía activa y vigente</p>
+        <select v-model="selectedClientId" style="margin-bottom:16px">
           <option value="">Seleccionar cliente...</option>
-          <option v-for="c in clients" :key="c.id" :value="c.name">{{ c.name }}</option>
+          <option v-for="c in selectableClients" :key="c.id" :value="String(c.id)">
+            {{ c.name }} — {{ c.plan }} ({{ statusLabel(c.status) }}{{ c.visitsRemaining != null ? ', ' + c.visitsRemaining + ' rest.' : '' }})
+          </option>
         </select>
-        <button class="btn btn-primary btn-lg" style="width:100%" @click="registerAttendance" :disabled="!selectedClient">✅ Registrar Entrada</button>
+        <button class="btn btn-primary btn-lg" style="width:100%" @click="registerAttendance" :disabled="!selectedClientId">✅ Validar y Abrir Puerta</button>
       </div>
     </div>
   </div>
@@ -43,35 +70,67 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { seedClients } from '../data/seed'
+import { useGymStore } from '../stores/gym'
+import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
+
+const gym = useGymStore()
+const auth = useAuthStore()
 const toast = useToastStore()
-const clients = seedClients.filter(c => c.status === 'active')
+
 const showCheckin = ref(false)
-const selectedClient = ref('')
-const records = ref([
-  { id: 1, client: 'Carlos Mendoza', date: '2026-05-29', checkin: '06:45', checkout: '08:15', duration: '1h 30min' },
-  { id: 2, client: 'María López', date: '2026-05-29', checkin: '07:00', checkout: '08:30', duration: '1h 30min' },
-  { id: 3, client: 'Diego Herrera', date: '2026-05-29', checkin: '07:15', checkout: null, duration: null },
-  { id: 4, client: 'Isabella Vargas', date: '2026-05-29', checkin: '08:00', checkout: null, duration: null },
-  { id: 5, client: 'Andrés Torres', date: '2026-05-28', checkin: '17:00', checkout: '18:45', duration: '1h 45min' },
-  { id: 6, client: 'Valentina Cruz', date: '2026-05-28', checkin: '06:30', checkout: '07:45', duration: '1h 15min' },
-])
-const todayCount = computed(() => records.value.filter(r => r.date === '2026-05-29').length)
+const selectedClientId = ref('')
 const doorStatus = ref('Cerrada')
 
-function registerAttendance() {
-  const clientObj = clients.find(c => c.name === selectedClient.value)
-  if (clientObj) {
-    if (clientObj.plan === 'Pospago por Tarjeta' && clientObj.visits > 0) {
-      clientObj.visits--
-    }
-    doorStatus.value = 'Abierta'
-    setTimeout(() => { doorStatus.value = 'Cerrada' }, 3000)
+const today = new Date().toISOString().split('T')[0]
+const todayCount = computed(() => gym.attendance.filter(r => r.date === today && r.status !== 'cancelled').length)
+const verifiedCount = computed(() => gym.attendance.filter(r => r.status === 'verified').length)
+const pospagoLeft = computed(() => {
+  const d = gym.clients.find(c => c.plan === 'Pospago por Tarjeta')
+  return d?.visitsRemaining ?? 0
+})
+
+const selectableClients = computed(() => {
+  if (auth.isUsuario && auth.user?.clientId) {
+    return gym.clients.filter(c => c.id === auth.user.clientId)
   }
-  
-  records.value.unshift({ id: Date.now(), client: selectedClient.value, date: '2026-05-29', checkin: new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' }), checkout: null, duration: null })
-  toast.success(`Asistencia registrada: ${selectedClient.value}`)
-  showCheckin.value = false; selectedClient.value = ''
+  return gym.clients
+})
+
+function statusLabel(s) {
+  return { active: 'Activa', expired: 'Vencida', frozen: 'Congelada', completed: 'Cumplida' }[s] || s
+}
+
+function toggleAccess() {
+  gym.setAccessControl(!gym.accessControlEnabled)
+  toast.info(gym.accessControlEnabled ? 'Control de acceso activado' : 'Control de acceso desactivado')
+}
+
+function registerAttendance() {
+  const result = gym.registerCheckin(Number(selectedClientId.value))
+  if (!result.success) {
+    doorStatus.value = 'Cerrada'
+    toast.error(result.message)
+    return
+  }
+  doorStatus.value = 'Abierta'
+  setTimeout(() => { doorStatus.value = 'Cerrada' }, 3000)
+  toast.success(result.message)
+  showCheckin.value = false
+  selectedClientId.value = ''
+}
+
+function verify(r) {
+  gym.verifyAttendance(r.id)
+  toast.success(`Asistencia verificada: ${r.client}`)
+}
+
+function cancel(r) {
+  gym.cancelAttendance(r.id)
+  toast.info(`Asistencia anulada: ${r.client}`)
 }
 </script>
+
+<style scoped>
+.cancelled { opacity: 0.55; text-decoration: line-through; }
+</style>

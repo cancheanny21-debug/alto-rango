@@ -41,9 +41,9 @@
             <div class="bank-detail"><span>Banco:</span><strong>Banco Pichincha</strong></div>
             <div class="bank-detail"><span>Tipo de Cuenta:</span><strong>Corriente</strong></div>
             <div class="bank-detail"><span>Número:</span><strong>2200123456</strong></div>
-            <div class="bank-detail"><span>Titular:</span><strong>PowerFit Gym S.A.</strong></div>
+            <div class="bank-detail"><span>Titular:</span><strong>Alto Rango Gym S.A.</strong></div>
             <div class="bank-detail"><span>RUC:</span><strong>1791234567001</strong></div>
-            <div class="bank-detail"><span>Email:</span><strong>pagos@powerfitgym.com</strong></div>
+            <div class="bank-detail"><span>Email:</span><strong>pagos@altorango.com</strong></div>
             <div class="form-group" style="margin-top:16px">
               <label>Número de Comprobante</label>
               <input v-model="transferRef" placeholder="Ej: 00012345678" required />
@@ -79,7 +79,7 @@
       <div class="receipt card" style="text-align:left;background:rgba(59,130,246,0.04)">
         <div style="text-align:center;margin-bottom:16px">
           <div style="font-size:2rem">💪</div>
-          <strong style="font-size:1.1rem">PowerFit Gym</strong>
+          <strong style="font-size:1.1rem">Alto Rango Gym</strong>
           <p style="font-size:0.8rem;color:var(--text-muted)">Comprobante de Venta</p>
         </div>
         <div class="receipt-row"><span>Pedido #</span><strong>{{ orderNumber }}</strong></div>
@@ -110,9 +110,11 @@
 import { ref } from 'vue'
 import { useCartStore } from '../stores/cart'
 import { useToastStore } from '../stores/toast'
+import { useGymStore } from '../stores/gym'
 
 const cart = useCartStore()
 const toast = useToastStore()
+const gym = useGymStore()
 const step = ref(1)
 const selectedMethod = ref('transfer')
 const transferRef = ref('')
@@ -138,10 +140,28 @@ function completePurchase() {
   receiptTax.value = cart.tax
   receiptTotal.value = cart.total
   orderNumber.value = 'ORD-' + Date.now().toString().slice(-6)
+  const methodName = paymentMethods.find(m => m.id === selectedMethod.value)?.name || selectedMethod.value
+  gym.recordSale({
+    id: Date.now(),
+    date: new Date().toISOString().split('T')[0],
+    client: form.value.name,
+    items: receiptItems.value.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
+    total: receiptTotal.value,
+    method: methodName,
+  })
+  // Descontar stock
+  receiptItems.value.forEach(item => {
+    const p = gym.products.find(x => x.id === item.id || x.name === item.name)
+    if (p) {
+      p.stock = Math.max(0, p.stock - item.qty)
+      p.sold = (p.sold || 0) + item.qty
+    }
+  })
+  gym.saveProducts()
   cart.clear()
   step.value = 3
   toast.success('¡Compra realizada exitosamente!')
-  setTimeout(() => toast.success('Notificación enviada al encargado: Nueva venta'), 1000)
+  setTimeout(() => toast.success('Notificación enviada al encargado'), 800)
 }
 </script>
 

@@ -1,19 +1,21 @@
 <template>
   <div class="public-store">
     <header class="public-header">
-      <div class="container header-content">
+      <div class="store-container header-content">
         <div class="logo">
-          <img src="/logo.jpeg" alt="Alto Rango Gym" class="logo-img" />
+          <img src="/logo.jpeg" alt="Alto Rango" class="logo-img" />
+          <div>
+            <strong>Alto Rango</strong>
+            <span>Suplementos</span>
+          </div>
         </div>
         <div class="social-links">
-          <a href="#" target="_blank" title="Facebook">FB</a>
-          <a href="#" target="_blank" title="Instagram">IG</a>
-          <a href="#" target="_blank" title="TikTok">TK</a>
+          <a v-for="s in socialLinks" :key="s.name" :href="s.url" target="_blank" rel="noopener noreferrer" :title="s.name">{{ s.short }}</a>
         </div>
       </div>
     </header>
 
-    <main class="container">
+    <main class="store-container">
       <div class="page-header">
         <div>
           <h2>Catálogo de Productos</h2>
@@ -39,13 +41,11 @@
           <div class="product-info">
             <div class="product-category">{{ p.category }}</div>
             <div class="product-name">{{ p.name }}</div>
-            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px">{{ p.desc }}</p>
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-              <span class="product-price">${{ p.price.toFixed(2) }}</span>
-            </div>
+            <p class="product-desc">{{ p.desc }}</p>
+            <div class="product-price">${{ p.price.toFixed(2) }}</div>
           </div>
-          <div class="product-actions" style="padding: 16px;">
-            <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin: 0;">Disponible en tienda física</p>
+          <div class="product-actions">
+            <p class="stock-note">Disponible en tienda física</p>
           </div>
         </div>
       </div>
@@ -59,23 +59,20 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { seedProducts } from '../data/seed'
+import { socialLinks } from '../data/seed'
+import { useGymStore } from '../stores/gym'
 
+const gym = useGymStore()
 const search = ref('')
 const category = ref('Todos')
 const categories = ['Todos', 'Bebidas', 'Suplementos', 'Snacks']
-const imageError = ref(false)
-
-const handleImageError = () => {
-  imageError.value = true
-}
 
 const filtered = computed(() => {
-  let list = seedProducts
+  let list = gym.products
   if (category.value !== 'Todos') list = list.filter(p => p.category === category.value)
-  if (search.value) { 
+  if (search.value) {
     const s = search.value.toLowerCase()
-    list = list.filter(p => p.name.toLowerCase().includes(s)) 
+    list = list.filter(p => p.name.toLowerCase().includes(s))
   }
   return list
 })
@@ -83,38 +80,51 @@ const filtered = computed(() => {
 
 <style scoped>
 .public-store {
+  flex: 1;
+  width: 100%;
   min-height: 100vh;
-  background-color: var(--bg-body, #f8fafc);
-  font-family: 'Inter', sans-serif;
+  background: var(--bg-primary, #060b18);
 }
 .public-header {
-  background-color: white;
-  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  background: rgba(12, 20, 37, 0.95);
+  border-bottom: 1px solid var(--border-color);
   padding: 16px 0;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
-.container {
+.store-container {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 24px 40px;
 }
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.logo h1 {
-  font-family: 'Outfit', sans-serif;
-  font-size: 1.5rem;
-  margin: 0;
-  color: var(--text-main, #0f172a);
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.logo h1 span {
-  color: var(--primary, #3b82f6);
+.logo strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+.logo span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 .logo-img {
   height: 48px;
+  width: 48px;
   object-fit: contain;
+  border-radius: 8px;
 }
 .social-links {
   display: flex;
@@ -126,16 +136,36 @@ const filtered = computed(() => {
   justify-content: center;
   width: 36px;
   height: 36px;
-  background-color: var(--bg-surface, #f1f5f9);
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid var(--border-color);
   border-radius: 50%;
-  color: var(--text-main, #334155);
+  color: var(--text-primary);
   text-decoration: none;
   font-weight: 600;
   font-size: 0.8rem;
   transition: all 0.2s;
 }
 .social-links a:hover {
-  background-color: var(--primary, #3b82f6);
+  background: var(--accent);
   color: white;
+  border-color: var(--accent);
+}
+.product-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.stock-note {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0;
+  width: 100%;
+}
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
+  width: 100%;
 }
 </style>

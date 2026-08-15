@@ -1,6 +1,6 @@
 <template>
-  <div class="app-wrapper">
-    <template v-if="auth.isAuthenticated">
+  <div class="app-wrapper" :class="{ 'app-wrapper--public': !auth.isAuthenticated || isPublicStore }">
+    <template v-if="auth.isAuthenticated && !isPublicStore">
       <AppSidebar :collapsed="sidebarCollapsed" @toggle="sidebarCollapsed = !sidebarCollapsed" />
       <div class="main-area" :class="{ collapsed: sidebarCollapsed }">
         <AppHeader @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed" />
@@ -10,25 +10,42 @@
       </div>
     </template>
     <template v-else>
-      <router-view />
+      <div class="public-shell">
+        <router-view />
+      </div>
     </template>
     <ToastContainer />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import AppSidebar from './components/AppSidebar.vue'
 import AppHeader from './components/AppHeader.vue'
 import ToastContainer from './components/ToastContainer.vue'
 
 const auth = useAuthStore()
+const route = useRoute()
 const sidebarCollapsed = ref(false)
+const isPublicStore = computed(() => route.path === '/public-store')
 </script>
 
 <style>
-.app-wrapper { display: flex; min-height: 100vh; }
+.app-wrapper {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+}
+.app-wrapper--public {
+  display: block;
+}
+.public-shell {
+  width: 100%;
+  min-height: 100vh;
+}
 
 .main-area {
   flex: 1;
@@ -37,6 +54,7 @@ const sidebarCollapsed = ref(false)
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
 }
 .main-area.collapsed { margin-left: 72px; }
 

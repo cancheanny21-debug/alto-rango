@@ -29,24 +29,33 @@ import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
 
 const props = defineProps({ collapsed: Boolean })
-const emit = defineEmits(['toggle'])
 const router = useRouter()
 const auth = useAuthStore()
 const cart = useCartStore()
 
-const menuItems = computed(() => [
-  { path: '/', icon: '📊', label: 'Dashboard' },
-  { path: '/clientes', icon: '👥', label: 'Clientes' },
-  { path: '/membresias', icon: '💳', label: 'Membresías' },
-  { path: '/asistencia', icon: '📋', label: 'Asistencia' },
-  { path: '/entrenadores', icon: '🏋️', label: 'Entrenadores' },
-  { path: '/clases', icon: '📅', label: 'Clases' },
-  { path: '/rutinas', icon: '🏋️', label: 'Rutinas' },
-  { path: '/tienda', icon: '🛍️', label: 'Tienda', badge: cart.totalItems || null },
-  { path: '/inventario', icon: '📦', label: 'Inventario' },
-  { path: '/reportes', icon: '📈', label: 'Reportes' },
-  { path: '/configuracion', icon: '⚙️', label: 'Configuración' },
-])
+const allItems = [
+  { path: '/', icon: '📊', label: 'Dashboard', roles: ['admin', 'empleado'] },
+  { path: '/clientes', icon: '👥', label: 'Clientes', roles: ['admin'] },
+  { path: '/membresias', icon: '💳', label: 'Membresías', roles: ['admin'] },
+  { path: '/asistencia', icon: '📋', label: 'Asistencia', roles: ['admin', 'empleado', 'usuario'] },
+  { path: '/entrenadores', icon: '🏋️', label: 'Entrenadores', roles: ['admin'] },
+  { path: '/clases', icon: '📅', label: 'Clases', roles: ['admin', 'empleado'] },
+  { path: '/rutinas', icon: '📝', label: 'Rutinas', roles: ['admin', 'empleado', 'usuario'] },
+  { path: '/tienda', icon: '🛍️', label: 'Ventas', roles: ['admin', 'empleado'], badgeKey: 'cart' },
+  { path: '/inventario', icon: '📦', label: 'Inventario', roles: ['admin', 'empleado'] },
+  { path: '/reportes', icon: '📈', label: 'Reportes', roles: ['admin'] },
+  { path: '/configuracion', icon: '⚙️', label: 'Configuración', roles: ['admin', 'empleado'] },
+  { path: '/public-store', icon: '🌐', label: 'Tienda Pública', roles: ['admin', 'empleado', 'usuario'] },
+]
+
+const menuItems = computed(() =>
+  allItems
+    .filter(i => i.roles.includes(auth.userRole))
+    .map(i => ({
+      ...i,
+      badge: i.badgeKey === 'cart' ? (cart.totalItems || null) : null,
+    }))
+)
 
 function handleLogout() { auth.logout(); router.push('/login') }
 </script>
@@ -69,7 +78,6 @@ function handleLogout() { auth.logout(); router.push('/login') }
   padding: 20px; height: var(--header-height);
   border-bottom: 1px solid var(--border-color);
 }
-.brand-icon { font-size: 1.8rem; }
 .brand-name {
   font-family: var(--font-display); font-size: 1.4rem; font-weight: 800;
   background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
