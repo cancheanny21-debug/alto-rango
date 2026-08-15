@@ -1,4 +1,4 @@
-# Alto Rango — Gym & Suplementos
+e # Alto Rango — Gym & Suplementos
 
 Sistema web para administrar **Alto Rango Gym** (membresías, acceso, asistencia, cobros) y la tienda **Alto Rango Suplementos** (ventas e inventario), según el documento de requisitos funcionales.
 
@@ -10,11 +10,11 @@ Sistema web para administrar **Alto Rango Gym** (membresías, acceso, asistencia
 
 ## Roles (RF seguridad)
 
-| Rol | Credencial demo | Acceso |
-|-----|-----------------|--------|
-| Administrador | `admin@altorango.com` / `admin123` | Todo el panel |
+| Rol                | Credencial demo                          | Acceso                                            |
+| ------------------ | ---------------------------------------- | ------------------------------------------------- |
+| Administrador      | `admin@altorango.com` / `admin123`       | Todo el panel                                     |
 | Empleado/Encargado | `empleado@altorango.com` / `empleado123` | Asistencia, ventas, inventario, control de acceso |
-| Usuario | `usuario@altorango.com` / `usuario123` | Asistencia propia y rutinas |
+| Usuario            | `usuario@altorango.com` / `usuario123`   | Asistencia propia y rutinas                       |
 
 ## Arranque
 
