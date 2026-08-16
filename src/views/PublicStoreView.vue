@@ -3,7 +3,8 @@
     <header class="public-header">
       <div class="store-container header-content">
         <div class="logo">
-          <img src="/logo.jpeg" alt="Alto Rango" class="logo-img" />
+          <button @click="router.push('/login')" class="back-btn">⬅ Volver</button>
+          <img src="/logotienda.jpeg" alt="Alto Rango" class="logo-img" />
           <div>
             <strong>Alto Rango</strong>
             <span>Suplementos</span>
@@ -59,8 +60,11 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { socialLinks } from '../data/seed'
 import { useGymStore } from '../stores/gym'
+
+const router = useRouter()
 
 const gym = useGymStore()
 const search = ref('')
@@ -110,6 +114,22 @@ const filtered = computed(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+.back-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 .logo strong {
   display: block;
