@@ -49,9 +49,11 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { Chart, registerables } from 'chart.js'
-import { monthlyRevenue, weeklyAttendance } from '../data/seed'
 import { useGymStore } from '../stores/gym'
 Chart.register(...registerables)
+
+const monthlyRevenue   = [3200, 3800, 4100, 3900, 4500, 5200, 4800, 5500, 5100, 5800, 6200, 6800]
+const weeklyAttendance = [45, 62, 58, 70, 55, 40, 20]
 
 const gym = useGymStore()
 const revenueChart = ref(null)

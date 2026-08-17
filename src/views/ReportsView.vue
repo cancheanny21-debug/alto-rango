@@ -38,10 +38,14 @@
 <script setup>
 import { ref, watch, nextTick, onMounted } from 'vue'
 import { Chart, registerables } from 'chart.js'
-import { monthlyRevenue, monthlyMembers, weeklyAttendance } from '../data/seed'
 import { useGymStore } from '../stores/gym'
 const gymStore = useGymStore()
 Chart.register(...registerables)
+
+// Datos históricos estáticos (representativos)
+const monthlyRevenue    = [3200, 3800, 4100, 3900, 4500, 5200, 4800, 5500, 5100, 5800, 6200, 6800]
+const monthlyMembers    = [80, 95, 110, 105, 120, 135, 140, 150, 145, 160, 170, 185]
+const weeklyAttendance  = [45, 62, 58, 70, 55, 40, 20]
 
 const tabs = ['Ingresos', 'Clientes', 'Ventas Tienda', 'Asistencia']
 const activeTab = ref('Ingresos')

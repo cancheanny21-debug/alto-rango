@@ -61,8 +61,13 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { socialLinks } from '../data/seed'
 import { useGymStore } from '../stores/gym'
+
+const socialLinks = [
+  { name: 'Facebook', short: 'FB', url: 'https://www.facebook.com/altorango' },
+  { name: 'Instagram', short: 'IG', url: 'https://www.instagram.com/altorango' },
+  { name: 'TikTok', short: 'TK', url: 'https://www.tiktok.com/@altorango' },
+]
 
 const router = useRouter()
 

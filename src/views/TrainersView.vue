@@ -40,10 +40,16 @@
 
 <script setup>
 import { ref } from 'vue'
-import { seedTrainers } from '../data/seed'
 import { useToastStore } from '../stores/toast'
 const toast = useToastStore()
-const trainers = ref([...seedTrainers])
+
+const DEFAULT_TRAINERS = [
+  { id: 1, name: 'Roberto Silva', specialty: 'Fuerza y Potencia', phone: '0991001001', email: 'roberto@altorango.com', emoji: '🏋️‍♂️', clients: 15, rating: 4.9, schedule: 'Lun-Vie 6:00-14:00' },
+  { id: 2, name: 'Ana García',    specialty: 'Yoga y Pilates',    phone: '0992002002', email: 'ana@altorango.com',     emoji: '🧘‍♀️', clients: 20, rating: 4.8, schedule: 'Lun-Sáb 7:00-15:00' },
+  { id: 3, name: 'Miguel Ramos',  specialty: 'CrossFit y Funcional', phone: '0993003003', email: 'miguel@altorango.com', emoji: '🤸‍♂️', clients: 18, rating: 4.7, schedule: 'Lun-Vie 14:00-22:00' },
+  { id: 4, name: 'Laura Vega',    specialty: 'Cardio y HIIT',    phone: '0994004004', email: 'laura@altorango.com',   emoji: '🏃‍♀️', clients: 22, rating: 4.9, schedule: 'Mar-Sáb 8:00-16:00' },
+]
+const trainers = ref([...DEFAULT_TRAINERS])
 const showModal = ref(false)
 const editing = ref(null)
 const form = ref({ name: '', specialty: '', phone: '', email: '', schedule: '' })

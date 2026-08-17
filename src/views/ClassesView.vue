@@ -48,10 +48,21 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { seedClasses } from '../data/seed'
 import { useToastStore } from '../stores/toast'
 const toast = useToastStore()
-const classes = ref([...seedClasses])
+const SEED_CLASSES = [
+  { id: 1, name: 'CrossFit Intenso',   trainer: 'Miguel Ramos',  day: 'Lunes',    time: '07:00', duration: 60, capacity: 15, enrolled: 12, emoji: '🔥', color: '#ef4444' },
+  { id: 2, name: 'Yoga Flow',          trainer: 'Ana García',    day: 'Lunes',    time: '09:00', duration: 60, capacity: 20, enrolled: 18, emoji: '🧘', color: '#8b5cf6' },
+  { id: 3, name: 'Spinning Power',     trainer: 'Laura Vega',    day: 'Martes',   time: '06:30', duration: 45, capacity: 20, enrolled: 20, emoji: '🚴', color: '#f59e0b' },
+  { id: 4, name: 'Fuerza Total',       trainer: 'Roberto Silva', day: 'Martes',   time: '17:00', duration: 60, capacity: 12, enrolled: 10, emoji: '💪', color: '#3b82f6' },
+  { id: 5, name: 'HIIT Cardio Blast',  trainer: 'Laura Vega',    day: 'Miércoles',time: '07:00', duration: 45, capacity: 25, enrolled: 22, emoji: '⚡', color: '#06b6d4' },
+  { id: 6, name: 'Pilates Core',       trainer: 'Ana García',    day: 'Miércoles',time: '10:00', duration: 50, capacity: 15, enrolled: 13, emoji: '🎯', color: '#10b981' },
+  { id: 7, name: 'Funcional Mix',      trainer: 'Miguel Ramos',  day: 'Jueves',   time: '18:00', duration: 60, capacity: 18, enrolled: 15, emoji: '🏋️', color: '#f97316' },
+  { id: 8, name: 'Yoga Restaurativo',  trainer: 'Ana García',    day: 'Viernes',  time: '08:00', duration: 75, capacity: 15, enrolled: 8,  emoji: '🌿', color: '#22c55e' },
+  { id: 9, name: 'CrossFit Open',      trainer: 'Miguel Ramos',  day: 'Viernes',  time: '17:00', duration: 60, capacity: 15, enrolled: 14, emoji: '🔥', color: '#ef4444' },
+  { id: 10, name: 'Body Combat',       trainer: 'Roberto Silva', day: 'Sábado',   time: '09:00', duration: 60, capacity: 20, enrolled: 16, emoji: '🥊', color: '#dc2626' },
+]
+const classes = ref([...SEED_CLASSES])
 const days = ['Todos','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
 const selectedDay = ref('Todos')
 const showModal = ref(false)
