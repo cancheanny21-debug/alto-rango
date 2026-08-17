@@ -7,13 +7,14 @@ INSERT INTO gyms (name, address, phone, email) VALUES
 ('Gimnasio Alto Rango Sur', 'Av. Sur 456', '555-0202', 'sur@altorango.com');
 
 -- 2. Insert Users
--- role_id: 1=Super Admin, 2=Admin, 3=Recepcionista
--- Password dummy (123456) hasheado (esto es solo representativo, en app real se encripta con bcrypt)
+-- role_id: 1=Super Admin, 2=Admin Gym, 3=Recepción, 4=Usuario
 INSERT INTO users (tenant_id, role_id, name, email, password) VALUES 
 (1, 2, 'Admin Norte', 'admin_norte@altorango.com', '123456'),
 (1, 3, 'Recepcion Norte', 'recepcion_norte@altorango.com', '123456'),
+(1, 4, 'Usuario Norte', 'usuario_norte@altorango.com', '123456'),
 (2, 2, 'Admin Sur', 'admin_sur@altorango.com', '123456'),
-(2, 3, 'Recepcion Sur', 'recepcion_sur@altorango.com', '123456');
+(2, 3, 'Recepcion Sur', 'recepcion_sur@altorango.com', '123456'),
+(2, 4, 'Usuario Sur', 'usuario_sur@altorango.com', '123456');
 
 -- 3. Insert Clients
 INSERT INTO clients (tenant_id, personal_data, physical_data) VALUES 

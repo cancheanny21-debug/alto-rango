@@ -25,6 +25,27 @@ function initials(name) {
   return (name || 'U').split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()
 }
 
+function normalizeRole(raw, roleId) {
+  const value = String(raw || '').toLowerCase().trim()
+  if (roleId === 1 || roleId === 2) return 'admin'
+  if (roleId === 3) return 'empleado'
+  if (['admin', 'administrador', 'super admin', 'superadmin'].includes(value)) return 'admin'
+  if (['empleado', 'encargado', 'recepcion', 'recepcionista'].includes(value)) return 'empleado'
+  if (value === 'usuario') return 'usuario'
+  return value || 'usuario'
+}
+
+function normalizeUser(data) {
+  if (!data) return null
+  const role = normalizeRole(data.role, data.role_id)
+  return {
+    ...data,
+    role,
+    position: data.position || ROLE_LABELS[role] || role,
+    avatar: data.photoUrl ? null : (data.avatar || initials(data.name)),
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
   // ── Estado persistido en localStorage ──────────────────
   let initialUser = null
@@ -36,7 +57,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (g) initialGym = { ...DEFAULT_GYM, ...g }
   } catch { /* noop */ }
 
-  const user        = ref(initialUser)
+  const user        = ref(normalizeUser(initialUser))
   const gym         = ref(initialGym)
   const systemUsers = ref([])   // se carga desde la API
 
@@ -65,14 +86,18 @@ export const useAuthStore = defineStore('auth', () => {
       })
       if (!res.ok) return false
       const data = await res.json()
-      const u = {
+      const u = normalizeUser({
         ...data,
-        position: ROLE_LABELS[data.role] || data.role,
-        avatar:   data.photoUrl ? null : initials(data.name),
-      }
+        photoUrl: data.photoUrl || null,
+      })
       user.value = u
       localStorage.setItem('gym_user', JSON.stringify(u))
-      localStorage.setItem('gym_info', JSON.stringify(gym.value))
+      if (data.gym) {
+        gym.value = { ...gym.value, ...data.gym }
+        localStorage.setItem('gym_info', JSON.stringify(gym.value))
+      } else {
+        localStorage.setItem('gym_info', JSON.stringify(gym.value))
+      }
       return true
     } catch (err) {
       console.error('Login error:', err)

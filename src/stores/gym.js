@@ -24,6 +24,11 @@ function nowTime() {
   return new Date().toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' })
 }
 
+function num(value) {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
 export const useGymStore = defineStore('gym', () => {
   const clients      = ref([])
   const plans        = ref([])
@@ -56,14 +61,14 @@ export const useGymStore = defineStore('gym', () => {
         api('/sales'),
       ])
       clients.value    = c
-      plans.value      = pl
-      products.value   = pr
+      plans.value      = (pl || []).map(p => ({ ...p, price: num(p.price), duration: num(p.duration) }))
+      products.value   = (pr || []).map(p => ({ ...p, price: num(p.price), stock: num(p.stock), sold: num(p.sold) }))
       equipment.value  = eq
-      payments.value   = pay
-      promotions.value = prom
-      attendance.value = att
+      payments.value   = (pay || []).map(p => ({ ...p, amount: num(p.amount), discount: num(p.discount) }))
+      promotions.value = (prom || []).map(p => ({ ...p, value: num(p.value) }))
+      attendance.value = (att || []).map(r => ({ ...r, client: r.client || r.client_name }))
       routines.value   = rot
-      sales.value      = sal
+      sales.value      = (sal || []).map(s => ({ ...s, total: num(s.total) }))
     } catch (err) {
       console.error('loadAll error:', err)
       error.value = err.message
@@ -267,7 +272,7 @@ export const useGymStore = defineStore('gym', () => {
     addNotification({
       type: 'sale',
       title: 'Nueva venta registrada',
-      message: `${sale.client_name} · $${sale.total.toFixed(2)} · ${sale.method}`,
+      message: `${sale.client_name} · $${num(sale.total).toFixed(2)} · ${sale.method}`,
       detail: sale.items.map(i => `${i.name} x${i.qty}`).join(', '),
     })
     // Actualizar stock localmente (la API ya lo hizo en BD)

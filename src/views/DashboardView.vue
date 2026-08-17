@@ -47,7 +47,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { Chart, registerables } from 'chart.js'
 import { useGymStore } from '../stores/gym'
 Chart.register(...registerables)
@@ -62,9 +62,9 @@ const attendanceChart = ref(null)
 const activeClients = computed(() => gym.clients.filter(c => c.status === 'active').length)
 const stats = computed(() => [
   { icon: '👥', label: 'Clientes Activos', value: activeClients.value, change: '↑ 12% vs mes anterior', changeColor: '#10b981', bg: 'rgba(59,130,246,0.15)' },
-  { icon: '💰', label: 'Cobros Membresías', value: '$' + gym.payments.reduce((s, p) => s + p.amount, 0).toFixed(0), change: 'Historial de cobros', changeColor: '#10b981', bg: 'rgba(6,182,212,0.15)' },
+  { icon: '💰', label: 'Cobros Membresías', value: '$' + gym.payments.reduce((s, p) => s + Number(p.amount || 0), 0).toFixed(0), change: 'Historial de cobros', changeColor: '#10b981', bg: 'rgba(6,182,212,0.15)' },
   { icon: '💳', label: 'Membresías Inactivas', value: String(gym.clients.filter(c => c.status !== 'active').length), change: 'Vencidas / congeladas / cumplidas', changeColor: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
-  { icon: '🛍️', label: 'Ventas Tienda', value: '$' + gym.sales.reduce((s, p) => s + p.total, 0).toFixed(0), change: 'Total histórico demo', changeColor: '#10b981', bg: 'rgba(139,92,246,0.15)' },
+  { icon: '🛍️', label: 'Ventas Tienda', value: '$' + gym.sales.reduce((s, p) => s + Number(p.total || 0), 0).toFixed(0), change: 'Total histórico demo', changeColor: '#10b981', bg: 'rgba(139,92,246,0.15)' },
 ])
 
 const recentActivity = [
@@ -86,26 +86,35 @@ const alerts = computed(() => {
 })
 
 onMounted(() => {
-  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-  const chartOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(59,130,246,0.06)' }, ticks: { color: '#64748b' } }, y: { grid: { color: 'rgba(59,130,246,0.06)' }, ticks: { color: '#64748b' } } } }
+  nextTick(() => {
+    const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+    const chartOpts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(59,130,246,0.06)' }, ticks: { color: '#64748b' } }, y: { grid: { color: 'rgba(59,130,246,0.06)' }, ticks: { color: '#64748b' } } } }
 
-  new Chart(revenueChart.value, {
-    type: 'line',
-    data: {
-      labels: months,
-      datasets: [{ label: 'Ingresos', data: monthlyRevenue, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#3b82f6', borderWidth: 2 }]
-    },
-    options: chartOpts
-  })
-
-  const days = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
-  new Chart(attendanceChart.value, {
-    type: 'bar',
-    data: {
-      labels: days,
-      datasets: [{ label: 'Asistencias', data: weeklyAttendance, backgroundColor: ['#3b82f6','#06b6d4','#8b5cf6','#3b82f6','#06b6d4','#8b5cf6','#64748b'], borderRadius: 8 }]
-    },
-    options: chartOpts
+    try {
+      if (revenueChart.value) {
+        new Chart(revenueChart.value, {
+          type: 'line',
+          data: {
+            labels: months,
+            datasets: [{ label: 'Ingresos', data: monthlyRevenue, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointBackgroundColor: '#3b82f6', borderWidth: 2 }]
+          },
+          options: chartOpts
+        })
+      }
+      if (attendanceChart.value) {
+        const days = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
+        new Chart(attendanceChart.value, {
+          type: 'bar',
+          data: {
+            labels: days,
+            datasets: [{ label: 'Asistencias', data: weeklyAttendance, backgroundColor: ['#3b82f6','#06b6d4','#8b5cf6','#3b82f6','#06b6d4','#8b5cf6','#64748b'], borderRadius: 8 }]
+          },
+          options: chartOpts
+        })
+      }
+    } catch (err) {
+      console.error('Dashboard charts:', err)
+    }
   })
 })
 </script>

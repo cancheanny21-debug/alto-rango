@@ -22,9 +22,9 @@
           </button>
           <div class="login-hint">
             <p><strong>Demo:</strong></p>
-            <p>admin@altorango.com / admin123</p>
-            <p>empleado@altorango.com / empleado123</p>
-            <p>usuario@altorango.com / usuario123</p>
+            <p>Admin: admin_norte@altorango.com / 123456</p>
+            <p>Recepción: recepcion_norte@altorango.com / 123456</p>
+            <p>Usuario: usuario_norte@altorango.com / 123456</p>
           </div>
         </form>
       </div>
@@ -38,14 +38,15 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
 
-const email = ref('admin@altorango.com')
-const password = ref('admin123')
+const email = ref('admin_norte@altorango.com')
+const password = ref('123456')
 const router = useRouter()
 const auth = useAuthStore()
 const toast = useToastStore()
 
-function handleLogin() {
-  if (auth.login(email.value, password.value)) {
+async function handleLogin() {
+  const ok = await auth.login(email.value, password.value)
+  if (ok) {
     toast.success(`¡Bienvenido a Alto Rango! (${auth.userRoleLabel})`)
     router.push(auth.isUsuario ? '/asistencia' : '/')
   } else {

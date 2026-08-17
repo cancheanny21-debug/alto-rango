@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { useAuthStore } from './stores/auth'
+import { pinia } from './stores/pinia'
 
 const routes = [
   { path: '/login', name: 'Login', component: () => import('./views/LoginView.vue'), meta: { public: true } },
@@ -23,17 +24,17 @@ const routes = [
 const router = createRouter({ history: createWebHashHistory(), routes })
 
 router.beforeEach((to, from, next) => {
-  const auth = useAuthStore()
+  const auth = useAuthStore(pinia)
   if (!to.meta.public && !auth.isAuthenticated) {
-    next('/login')
+    next({ path: '/login', replace: true })
     return
   }
   if (to.path === '/login' && auth.isAuthenticated) {
-    next(auth.isUsuario ? '/asistencia' : '/')
+    next({ path: auth.isUsuario ? '/asistencia' : '/', replace: true })
     return
   }
   if (to.meta.roles && auth.isAuthenticated && !to.meta.roles.includes(auth.userRole)) {
-    next(auth.isUsuario ? '/asistencia' : '/')
+    next({ path: auth.isUsuario ? '/asistencia' : '/', replace: true })
     return
   }
   next()

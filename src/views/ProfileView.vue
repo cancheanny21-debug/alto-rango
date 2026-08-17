@@ -7,7 +7,7 @@
         <!-- Avatar con upload -->
         <div class="avatar-section">
           <div class="avatar-wrapper" @click="triggerFileInput" :title="'Cambiar foto'">
-            <img v-if="previewUrl || auth.user?.photoUrl" :src="previewUrl || auth.user.photoUrl" class="avatar-img" alt="Foto de perfil" />
+            <img v-if="previewUrl || auth.user?.photoUrl" :src="previewUrl || auth.user?.photoUrl" class="avatar-img" alt="Foto de perfil" />
             <div v-else class="avatar-initials" :style="{ background: avatarGradient }">
               {{ auth.user?.avatar || 'U' }}
             </div>

@@ -1,6 +1,7 @@
-# Plataforma SaaS para Administración de Gimnasios
+n# Plataforma SaaS para Administración de Gimnasios
 
 ## Índice
+
 1. Introducción
 2. Objetivos del Sistema
 3. Análisis de Requerimientos
@@ -428,15 +429,19 @@ La plataforma ofrecerá:
 # 6.4 Segmentación de Clientes
 
 ## Segmento 1
+
 Pequeños gimnasios.
 
 ## Segmento 2
+
 Cadenas medianas.
 
 ## Segmento 3
+
 Centros premium.
 
 ## Segmento 4
+
 Entrenadores independientes.
 
 ---
@@ -870,30 +875,36 @@ Solo public apunta a public_html.
 # 11.3 Pasos de Despliegue
 
 ## Paso 1
+
 Subir proyecto.
 
 ## Paso 2
+
 Instalar dependencias.
 
 composer install --optimize-autoloader --no-dev
 
 ## Paso 3
+
 Configurar .env
 
 ## Paso 4
+
 Migraciones.
 
 php artisan migrate --seed
 
 ## Paso 5
+
 Optimización.
 
 php artisan optimize
 
 ## Paso 6
+
 Configurar cron.
 
-* * * * * php /home/user/app/artisan schedule:run
+- - - - - php /home/user/app/artisan schedule:run
 
 ---
 
@@ -1482,4 +1493,3 @@ La plataforma puede evolucionar hacia:
 - Integración con wearables.
 - Automatización avanzada.
 - Marketplace fitness.
-

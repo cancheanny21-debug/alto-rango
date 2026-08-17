@@ -50,7 +50,7 @@ const weeklyAttendance  = [45, 62, 58, 70, 55, 40, 20]
 const tabs = ['Ingresos', 'Clientes', 'Ventas Tienda', 'Asistencia']
 const activeTab = ref('Ingresos')
 const revenueRef = ref(null); const membersRef = ref(null); const attendRef = ref(null)
-const topProducts = [...gymStore.products].sort((a, b) => b.sold - a.sold).slice(0, 8)
+const topProducts = [...(gymStore.products || [])].sort((a, b) => (b.sold || 0) - (a.sold || 0)).slice(0, 8)
 const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 const opts = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(59,130,246,0.06)' }, ticks: { color: '#64748b' } }, y: { grid: { color: 'rgba(59,130,246,0.06)' }, ticks: { color: '#64748b' } } } }
 let charts = {}

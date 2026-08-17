@@ -1,6 +1,6 @@
 <template>
-  <div class="app-wrapper" :class="{ 'app-wrapper--public': !auth.isAuthenticated || isPublicStore }">
-    <template v-if="auth.isAuthenticated && !isPublicStore">
+  <div class="app-wrapper" :class="{ 'app-wrapper--public': !showAppShell }">
+    <template v-if="showAppShell">
       <AppSidebar :collapsed="sidebarCollapsed" @toggle="sidebarCollapsed = !sidebarCollapsed" />
       <div class="main-area" :class="{ collapsed: sidebarCollapsed }">
         <AppHeader @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed" />
@@ -31,7 +31,7 @@ const auth = useAuthStore()
 const gym  = useGymStore()
 const route = useRoute()
 const sidebarCollapsed = ref(false)
-const isPublicStore = computed(() => route.path === '/public-store')
+const showAppShell = computed(() => auth.isAuthenticated && !route.meta.public)
 
 // Cargar datos cuando el usuario está autenticado
 onMounted(() => { if (auth.isAuthenticated) gym.loadAll() })

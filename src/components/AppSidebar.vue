@@ -44,6 +44,7 @@ const allItems = [
   { path: '/tienda', icon: '🛍️', label: 'Ventas', roles: ['admin', 'empleado'], badgeKey: 'cart' },
   { path: '/inventario', icon: '📦', label: 'Inventario', roles: ['admin', 'empleado'] },
   { path: '/reportes', icon: '📈', label: 'Reportes', roles: ['admin'] },
+  { path: '/perfil', icon: '👤', label: 'Mi perfil', roles: ['admin', 'empleado', 'usuario'] },
   { path: '/configuracion', icon: '⚙️', label: 'Configuración', roles: ['admin', 'empleado'] },
   { path: '/public-store', icon: '🌐', label: 'Tienda Pública', roles: ['admin', 'empleado', 'usuario'] },
 ]

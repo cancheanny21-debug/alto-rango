@@ -1,11 +1,9 @@
 // server/routes/users.js
 import { Router } from 'express'
 import pool from '../db.js'
+import { ROLE_ID, ROLE_LABELS, ROLE_SQL } from '../roles.js'
 
 const router = Router()
-
-const ROLE_LABELS = { admin: 'Administrador', empleado: 'Empleado/Encargado', usuario: 'Usuario' }
-const ROLE_ID = { admin: 1, empleado: 2, usuario: 3 }
 
 // GET /api/users
 router.get('/', async (req, res) => {
@@ -13,7 +11,7 @@ router.get('/', async (req, res) => {
     const [rows] = await pool.execute(
       `SELECT id, tenant_id, role_id, name, email, profile_image_url,
               status, last_login, created_at,
-              CASE role_id WHEN 1 THEN 'admin' WHEN 2 THEN 'empleado' ELSE 'usuario' END AS role
+              ${ROLE_SQL} AS role
        FROM users ORDER BY id`
     )
     const users = rows.map(u => ({
