@@ -192,7 +192,10 @@ export const useAuthStore = defineStore('auth', () => {
       const patch = { ...data }
       if (patch.role) patch.role = normalizeRole(patch.role) || systemUsers.value[idx].role
       systemUsers.value[idx] = { ...systemUsers.value[idx], ...patch }
-      if (patch.name) systemUsers.value[idx].avatar = initials(patch.name)
+      // Solo recalcular avatar de iniciales si no hay foto personalizada
+      if (patch.name && !systemUsers.value[idx].photoUrl) {
+        systemUsers.value[idx].avatar = initials(patch.name)
+      }
       saveUsers()
     }
   }

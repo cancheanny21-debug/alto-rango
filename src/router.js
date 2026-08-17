@@ -17,6 +17,7 @@ const routes = [
   { path: '/configuracion', name: 'Configuracion', component: () => import('./views/SettingsView.vue'), meta: { roles: ['admin', 'empleado'] } },
   { path: '/public-store', name: 'PublicStore', component: () => import('./views/PublicStoreView.vue'), meta: { public: true } },
   { path: '/rutinas', name: 'Rutinas', component: () => import('./views/RoutinesView.vue'), meta: { roles: ['admin', 'empleado', 'usuario'] } },
+  { path: '/perfil', name: 'Perfil', component: () => import('./views/ProfileView.vue'), meta: { roles: ['admin', 'empleado', 'usuario'] } },
 ]
 
 const router = createRouter({ history: createWebHashHistory(), routes })

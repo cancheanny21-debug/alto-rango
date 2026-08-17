@@ -30,7 +30,10 @@
         🛒
         <span v-if="cart.totalItems" class="cart-count">{{ cart.totalItems }}</span>
       </router-link>
-      <div class="avatar">{{ auth.user?.avatar || 'A' }}</div>
+      <router-link to="/perfil" class="header-avatar-link" id="header-profile-btn" title="Ver mi perfil">
+        <img v-if="auth.user?.photoUrl" :src="auth.user.photoUrl" class="avatar avatar-photo" alt="Foto de perfil" />
+        <div v-else class="avatar">{{ auth.user?.avatar || 'A' }}</div>
+      </router-link>
     </div>
   </header>
 </template>
@@ -109,5 +112,24 @@ const today = computed(() => new Date().toLocaleDateString('es-EC', { weekday: '
 @media (max-width: 768px) {
   .app-header { left: 0; padding: 0 16px; }
   .header-menu-btn { display: flex; }
+}
+
+.header-avatar-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  border-radius: 50%;
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+.header-avatar-link:hover {
+  box-shadow: 0 0 0 3px rgba(139,92,246,0.5);
+  transform: scale(1.05);
+}
+.avatar-photo {
+  width: 38px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.15);
 }
 </style>
