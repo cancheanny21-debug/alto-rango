@@ -19,17 +19,23 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
+import { useGymStore }  from './stores/gym'
 import AppSidebar from './components/AppSidebar.vue'
 import AppHeader from './components/AppHeader.vue'
 import ToastContainer from './components/ToastContainer.vue'
 
 const auth = useAuthStore()
+const gym  = useGymStore()
 const route = useRoute()
 const sidebarCollapsed = ref(false)
 const isPublicStore = computed(() => route.path === '/public-store')
+
+// Cargar datos cuando el usuario está autenticado
+onMounted(() => { if (auth.isAuthenticated) gym.loadAll() })
+watch(() => auth.isAuthenticated, (val) => { if (val) gym.loadAll() })
 </script>
 
 <style>
