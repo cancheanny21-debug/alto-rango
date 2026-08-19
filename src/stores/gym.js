@@ -78,9 +78,15 @@ export const useGymStore = defineStore('gym', () => {
   }
 
   // ─── Computeds ─────────────────────────────────────────
-  const activePromo = computed(() =>
-    promotions.value.find(p => p.active && p.applies_to === 'membresias') || null
-  )
+  const activePromo = computed(() => {
+    const today = todayStr()
+    return promotions.value.find(p => {
+      if (!p.active || p.applies_to !== 'membresias') return false
+      if (p.startDate && p.startDate > today) return false
+      if (p.endDate && p.endDate < today) return false
+      return true
+    }) || null
+  })
   const unreadNotifications = computed(() => notifications.value.filter(n => !n.read).length)
 
   // ─── Descuentos y planes ───────────────────────────────
@@ -139,12 +145,21 @@ export const useGymStore = defineStore('gym', () => {
       })
       attendance.value.unshift(record)
 
+      const msg = client.plan === 'Pospago por Tarjeta'
+        ? `Entrada OK. Quedan ${updates.visits_remaining} asistencias`
+        : `Entrada registrada: ${client.name}`
+        
+      addNotification({
+        type: 'checkin',
+        title: 'Nuevo Ingreso',
+        message: msg,
+        detail: `Cliente: ${client.name} | Hora: ${nowTime()}`
+      })
+
       return {
         success: true,
         doorOpen: true,
-        message: client.plan === 'Pospago por Tarjeta'
-          ? `Entrada OK. Quedan ${updates.visits_remaining} asistencias`
-          : `Entrada registrada: ${client.name}`,
+        message: msg,
         remaining: updates.visits_remaining,
       }
     } catch (err) {
@@ -205,6 +220,14 @@ export const useGymStore = defineStore('gym', () => {
       }
     })
     payments.value.unshift(payment)
+    
+    addNotification({
+      type: 'payment',
+      title: 'Pago Recibido',
+      message: `${client?.name || 'Cliente'} - $${priced.final.toFixed(2)}`,
+      detail: `Concepto: ${concept} | Método: ${method}`
+    })
+    
     return payment
   }
 
@@ -297,6 +320,14 @@ export const useGymStore = defineStore('gym', () => {
   async function addClient(clientData) {
     const created = await api('/clients', { method: 'POST', body: clientData })
     clients.value.unshift(created)
+    
+    addNotification({
+      type: 'client',
+      title: 'Nuevo Cliente Registrado',
+      message: clientData.name,
+      detail: `Plan: ${clientData.plan || 'Sin plan'} | Cédula: ${clientData.cedula || 'N/A'}`
+    })
+    
     return created
   }
 

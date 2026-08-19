@@ -98,23 +98,23 @@
           <h2>Detalle del Cliente</h2>
           <button class="modal-close-btn" @click="showDetail = false">✕</button>
         </div>
-        <div style="text-align:center;margin-bottom:20px">
-          <div style="font-size:4rem">{{ detailClient.photo }}</div>
-          <h3>{{ detailClient.name }}</h3>
+        <div style="text-align:center;margin-bottom:12px">
+          <div style="font-size:3rem;line-height:1">{{ detailClient.photo }}</div>
+          <h3 style="margin:4px 0">{{ detailClient.name }}</h3>
           <span class="badge" :class="statusClass(detailClient.status)">{{ statusLabel(detailClient.status) }}</span>
         </div>
         <div class="detail-grid">
           <div class="detail-item"><span class="detail-label">Email</span><span>{{ detailClient.email }}</span></div>
           <div class="detail-item"><span class="detail-label">Teléfono</span><span>{{ detailClient.phone }}</span></div>
           <div class="detail-item"><span class="detail-label">Plan</span><span>{{ detailClient.plan }}</span></div>
-          <div class="detail-item"><span class="detail-label">Vence</span><span>{{ detailClient.plan_end }}</span></div>
+          <div class="detail-item"><span class="detail-label">Vence</span><span>{{ formatDate(detailClient.plan_end) }}</span></div>
           <div class="detail-item"><span class="detail-label">Peso</span><span>{{ detailClient.weight }} kg</span></div>
           <div class="detail-item"><span class="detail-label">Altura</span><span>{{ detailClient.height }} cm</span></div>
           <div class="detail-item"><span class="detail-label">IMC</span><span>{{ detailClient.bmi }}</span></div>
           <div class="detail-item"><span class="detail-label">Visitas</span><span>{{ detailClient.visits }}</span></div>
-          <div class="detail-item"><span class="detail-label">Miembro desde</span><span>{{ detailClient.join_date }}</span></div>
+          <div class="detail-item"><span class="detail-label">Miembro desde</span><span>{{ formatDate(detailClient.join_date) }}</span></div>
         </div>
-        <div style="text-align:center;margin-top:20px;padding:20px;background:var(--bg-card);border-radius:var(--radius-sm);font-family:monospace;font-size:1.2rem;letter-spacing:4px">
+        <div style="text-align:center;margin-top:12px;padding:12px;background:var(--bg-card);border-radius:var(--radius-sm);font-family:monospace;font-size:1.1rem;letter-spacing:2px">
           QR: {{ detailClient.name.replace(/\s/g,'').toUpperCase().slice(0,6) }}-{{ detailClient.id }}
         </div>
       </div>
@@ -155,7 +155,9 @@ function statusClass(s) { return s === 'active' ? 'badge-success' : (s === 'expi
 function statusLabel(s) { return { active: 'Activo', expired: 'Vencido', frozen: 'Congelado', completed: 'Cumplido' }[s] || s }
 
 function formatDate(dateStr) {
-  return dateStr ? dateStr.split('T')[0] : '—'
+  if (!dateStr) return '—'
+  const [y, m, d] = dateStr.split('T')[0].split('-')
+  return `${d}/${m}/${y}`
 }
 
 async function checkinClient(c) {
@@ -233,8 +235,16 @@ async function saveClient() {
 </script>
 
 <style scoped>
-.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.detail-item { display: flex; flex-direction: column; padding: 8px 12px; background: var(--bg-card); border-radius: var(--radius-sm); }
+.detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.detail-item { 
+  display: flex; flex-direction: column; 
+  padding: 6px 10px; background: var(--bg-card); border-radius: var(--radius-sm);
+  min-width: 0;
+}
+.detail-item span:not(.detail-label) {
+  word-break: break-word;
+  font-size: 0.9rem;
+}
 .detail-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px; }
 
 </style>

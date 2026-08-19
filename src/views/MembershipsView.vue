@@ -31,13 +31,14 @@
     </div>
     <div class="table-container" style="margin-top:12px">
       <table>
-        <thead><tr><th>Nombre</th><th>Tipo</th><th>Valor</th><th>Aplica a</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Tipo</th><th>Valor</th><th>Aplica a</th><th>Vigencia</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody>
           <tr v-for="pr in gym.promotions" :key="pr.id">
             <td><strong>{{ pr.name }}</strong><br><small style="color:var(--text-muted)">{{ pr.description }}</small></td>
             <td>{{ pr.type === 'percent' ? 'Porcentaje' : 'Monto fijo' }}</td>
             <td>{{ pr.type === 'percent' ? pr.value + '%' : '$' + pr.value }}</td>
             <td>{{ formatAppliesTo(pr) }}</td>
+            <td style="font-size: 0.85rem;">{{ formatVigencia(pr) }}</td>
             <td><span class="badge" :class="pr.active ? 'badge-success' : 'badge-warning'">{{ pr.active ? 'Activa' : 'Inactiva' }}</span></td>
             <td style="display:flex;gap:6px">
               <button class="btn btn-secondary btn-sm" @click="gym.togglePromotion(pr.id)">{{ pr.active ? 'Desactivar' : 'Activar' }}</button>
@@ -203,6 +204,10 @@
               </select>
             </div>
           </div>
+          <div class="form-row">
+            <div class="form-group"><label>Fecha de Inicio (Opcional)</label><input v-model="promoForm.startDate" type="date" /></div>
+            <div class="form-group"><label>Fecha de Fin (Opcional)</label><input v-model="promoForm.endDate" type="date" /></div>
+          </div>
           <label style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
             <input type="checkbox" v-model="promoForm.active" /> Activar al crear
           </label>
@@ -234,7 +239,7 @@ const showPayModal = ref(false)
 const payForm = ref({ clientId: null, concept: 'Cobro de membresía', amount: 0, method: 'Efectivo' })
 
 const showPromoModal = ref(false)
-const promoForm = ref({ name: '', description: '', type: 'percent', value: 10, appliesTo: 'membresias', targetId: null, active: true })
+const promoForm = ref({ name: '', description: '', type: 'percent', value: 10, appliesTo: 'membresias', targetId: null, active: true, startDate: '', endDate: '' })
 
 const previewPrice = computed(() => {
   const plan = gym.getPlanByName(changePlanName.value)
@@ -261,6 +266,13 @@ function formatAppliesTo(pr) {
     return i ? `Producto: ${i.name}` : 'Producto Específico'
   }
   return pr.appliesTo
+}
+
+function formatVigencia(pr) {
+  if (!pr.startDate && !pr.endDate) return 'Permanente'
+  const start = pr.startDate ? new Date(pr.startDate).toLocaleDateString('es-EC') : 'Siempre'
+  const end = pr.endDate ? new Date(pr.endDate).toLocaleDateString('es-EC') : 'Siempre'
+  return `${start} a ${end}`
 }
 
 function openPlanModal(p = null) {
@@ -329,7 +341,7 @@ function savePromo() {
   gym.addPromotion({ ...promoForm.value })
   toast.success('Promoción creada')
   showPromoModal.value = false
-  promoForm.value = { name: '', description: '', type: 'percent', value: 10, appliesTo: 'membresias', targetId: null, active: true }
+  promoForm.value = { name: '', description: '', type: 'percent', value: 10, appliesTo: 'membresias', targetId: null, active: true, startDate: '', endDate: '' }
 }
 </script>
 
