@@ -34,7 +34,7 @@
     </div>
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
       <div class="modal-content">
-        <div class="modal-header"><h2>Nueva Clase</h2><button class="btn-icon" @click="showModal = false">✕</button></div>
+        <div class="modal-header"><h2>Nueva Clase</h2><button class="modal-close-btn" @click="showModal = false">✕</button></div>
         <form @submit.prevent="addClass">
           <div class="form-row"><div class="form-group"><label>Nombre</label><input v-model="form.name" required /></div><div class="form-group"><label>Entrenador</label><input v-model="form.trainer" required /></div></div>
           <div class="form-row"><div class="form-group"><label>Día</label><select v-model="form.day"><option v-for="d in days.slice(1)" :key="d">{{ d }}</option></select></div><div class="form-group"><label>Hora</label><input v-model="form.time" type="time" required /></div></div>

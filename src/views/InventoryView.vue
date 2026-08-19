@@ -79,7 +79,7 @@
 
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
       <div class="modal-content">
-        <div class="modal-header"><h2>{{ modalTitle }}</h2><button class="btn-icon" @click="showModal = false">✕</button></div>
+        <div class="modal-header"><h2>{{ modalTitle }}</h2><button class="modal-close-btn" @click="showModal = false">✕</button></div>
         <form v-if="tab === 'productos'" @submit.prevent="saveProduct">
           <div class="form-group"><label>Nombre</label><input v-model="productForm.name" required /></div>
           <div class="form-row">

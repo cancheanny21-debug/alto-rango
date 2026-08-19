@@ -47,4 +47,37 @@ router.post('/login', async (req, res) => {
   }
 })
 
+// POST /api/auth/register
+// RF-021: Registro exclusivo para clientes (Usuario)
+router.post('/register', async (req, res) => {
+  const { tenant_id, name, email, password } = req.body
+  if (!tenant_id || !name || !email || !password) {
+    return res.status(400).json({ error: 'Faltan campos obligatorios' })
+  }
+
+  try {
+    const [existing] = await pool.execute('SELECT id FROM users WHERE email = ?', [email])
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'El email ya está registrado' })
+    }
+
+    // Insertar como rol 3 (Usuario)
+    const [result] = await pool.execute(
+      'INSERT INTO users (tenant_id, role_id, name, email, password, status) VALUES (?, 3, ?, ?, ?, "active")',
+      [tenant_id, name, email, password]
+    )
+
+    // Crear entrada en clients
+    await pool.execute(
+      'INSERT INTO clients (tenant_id, personal_data) VALUES (?, ?)',
+      [tenant_id, JSON.stringify({ name, email })]
+    )
+
+    res.status(201).json({ success: true, message: 'Usuario registrado exitosamente', userId: result.insertId })
+  } catch (err) {
+    console.error('Error al registrar usuario:', err)
+    res.status(500).json({ error: 'Error interno del servidor' })
+  }
+})
+
 export default router

@@ -79,7 +79,7 @@
 
     <div v-if="showUserModal" class="modal-overlay" @click.self="showUserModal = false">
       <div class="modal-content">
-        <div class="modal-header"><h2>{{ editingUser ? 'Editar' : 'Nuevo' }} Usuario</h2><button class="btn-icon" @click="showUserModal = false">✕</button></div>
+        <div class="modal-header"><h2>{{ editingUser ? 'Editar' : 'Nuevo' }} Usuario</h2><button class="modal-close-btn" @click="showUserModal = false">✕</button></div>
         <form @submit.prevent="saveUser">
           <div class="form-group"><label>Nombre</label><input v-model="userForm.name" required /></div>
           <div class="form-group"><label>Email</label><input v-model="userForm.email" type="email" required /></div>

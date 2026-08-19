@@ -10,6 +10,10 @@ import plansRoutes      from './routes/plans.js'
 import productsRoutes   from './routes/products.js'
 import attendanceRoutes from './routes/attendance.js'
 import gymRoutes        from './routes/gym.js'
+import promotionsRoutes from './routes/promotions.js'
+import paymentsRoutes   from './routes/payments.js'
+import salesRoutes      from './routes/sales.js'
+import routinesRoutes   from './routes/routines.js'
 
 const app  = express()
 const PORT = process.env.PORT || 3001
@@ -27,6 +31,10 @@ app.use('/api/clients',    clientsRoutes)
 app.use('/api/plans',      plansRoutes)
 app.use('/api/products',   productsRoutes)
 app.use('/api/attendance', attendanceRoutes)
+app.use('/api/promotions', promotionsRoutes)
+app.use('/api/payments',   paymentsRoutes)
+app.use('/api/sales',      salesRoutes)
+app.use('/api/routines',   routinesRoutes)
 app.use('/api',            gymRoutes)       // /api/payments, /api/sales, /api/promotions, etc.
 
 // Manejo de errores global
@@ -35,6 +43,29 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Error interno del servidor' })
 })
 
-app.listen(PORT, () => {
+// Importar el pool de base de datos para la migración
+import pool from './db.js'
+
+app.listen(PORT, async () => {
+  // Asegurar que la columna direct_access existe
+  try {
+    await pool.execute('ALTER TABLE clients ADD COLUMN direct_access BOOLEAN DEFAULT FALSE')
+    console.log('✅ Migración DB: Columna direct_access añadida a la tabla clients')
+  } catch (err) {
+    if (err.code !== 'ER_DUP_FIELDNAME') {
+      console.error('⚠️ Advertencia en migración DB (direct_access):', err.message)
+    }
+  }
+
+  // Asegurar que la columna password existe en clients
+  try {
+    await pool.execute('ALTER TABLE clients ADD COLUMN password VARCHAR(255) DEFAULT NULL')
+    console.log('✅ Migración DB: Columna password añadida a la tabla clients')
+  } catch (err) {
+    if (err.code !== 'ER_DUP_FIELDNAME') {
+      console.error('⚠️ Advertencia en migración DB (password):', err.message)
+    }
+  }
+
   console.log(`🚀 API servidor corriendo en http://localhost:${PORT}/api`)
 })

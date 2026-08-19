@@ -13,7 +13,7 @@
       </div>
     </div>
 
-    <div class="dashboard-grid">
+    <div v-if="auth.isAdmin" class="dashboard-grid">
       <div class="card chart-card">
         <h3>📈 Ingresos Mensuales</h3>
         <div class="chart-container"><canvas ref="revenueChart"></canvas></div>
@@ -50,22 +50,38 @@
 import { ref, onMounted, computed, nextTick } from 'vue'
 import { Chart, registerables } from 'chart.js'
 import { useGymStore } from '../stores/gym'
+import { useAuthStore } from '../stores/auth'
 Chart.register(...registerables)
 
 const monthlyRevenue   = [3200, 3800, 4100, 3900, 4500, 5200, 4800, 5500, 5100, 5800, 6200, 6800]
 const weeklyAttendance = [45, 62, 58, 70, 55, 40, 20]
 
 const gym = useGymStore()
+const auth = useAuthStore()
 const revenueChart = ref(null)
 const attendanceChart = ref(null)
 
 const activeClients = computed(() => gym.clients.filter(c => c.status === 'active').length)
-const stats = computed(() => [
-  { icon: '👥', label: 'Clientes Activos', value: activeClients.value, change: '↑ 12% vs mes anterior', changeColor: '#10b981', bg: 'rgba(59,130,246,0.15)' },
+const today = new Date().toISOString().split('T')[0]
+const todayAttendance = computed(() => gym.attendance.filter(a => (a.date || '').startsWith(today) && a.status !== 'cancelled').length)
+const todaySales = computed(() => gym.sales.filter(s => (s.sale_date || s.created_at || '').startsWith(today)).reduce((sum, s) => sum + Number(s.total || 0), 0))
+const todayClasses = computed(() => (gym.classes || []).filter(c => (c.schedule || c.date || '').startsWith(today)).length)
+
+const adminStats = computed(() => [
+  { icon: '👥', label: 'Clientes Activos', value: activeClients.value, change: 'Membresías vigentes', changeColor: '#10b981', bg: 'rgba(59,130,246,0.15)' },
   { icon: '💰', label: 'Cobros Membresías', value: '$' + gym.payments.reduce((s, p) => s + Number(p.amount || 0), 0).toFixed(0), change: 'Historial de cobros', changeColor: '#10b981', bg: 'rgba(6,182,212,0.15)' },
-  { icon: '💳', label: 'Membresías Inactivas', value: String(gym.clients.filter(c => c.status !== 'active').length), change: 'Vencidas / congeladas / cumplidas', changeColor: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
-  { icon: '🛍️', label: 'Ventas Tienda', value: '$' + gym.sales.reduce((s, p) => s + Number(p.total || 0), 0).toFixed(0), change: 'Total histórico demo', changeColor: '#10b981', bg: 'rgba(139,92,246,0.15)' },
+  { icon: '💳', label: 'Membresías Inactivas', value: String(gym.clients.filter(c => c.status !== 'active').length), change: 'Vencidas / congeladas', changeColor: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
+  { icon: '🛍️', label: 'Ventas Tienda', value: '$' + gym.sales.reduce((s, p) => s + Number(p.total || 0), 0).toFixed(0), change: 'Total histórico', changeColor: '#10b981', bg: 'rgba(139,92,246,0.15)' },
 ])
+
+const empleadoStats = computed(() => [
+  { icon: '👥', label: 'Clientes presentes', value: todayAttendance.value, change: 'Asistencias de hoy', changeColor: '#10b981', bg: 'rgba(59,130,246,0.15)' },
+  { icon: '🕐', label: 'Asistencias hoy', value: todayAttendance.value, change: 'Registradas hoy', changeColor: '#10b981', bg: 'rgba(6,182,212,0.15)' },
+  { icon: '📅', label: 'Clases de hoy', value: todayClasses.value, change: 'Programadas', changeColor: '#8b5cf6', bg: 'rgba(139,92,246,0.15)' },
+  { icon: '🛒', label: 'Ventas del día', value: '$' + todaySales.value.toFixed(2), change: 'Total del día', changeColor: '#10b981', bg: 'rgba(245,158,11,0.15)' },
+])
+
+const stats = computed(() => auth.isAdmin ? adminStats.value : empleadoStats.value)
 
 const recentActivity = [
   { id: 1, icon: '✅', text: 'Carlos Mendoza registró asistencia', time: 'Hace 10 min' },

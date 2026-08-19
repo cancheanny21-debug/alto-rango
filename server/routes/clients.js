@@ -23,37 +23,88 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/clients
 router.post('/', async (req, res) => {
+  console.log('[POST /api/clients] body recibido:', JSON.stringify(req.body))
   const { tenant_id = 1, name, email, phone, status = 'active', plan, plan_end, photo = '👤',
-          weight, height, bmi, join_date, visits = 0, visits_remaining } = req.body
+          weight, height, bmi, join_date, visits = 0, visits_remaining, direct_access = 0, password } = req.body
+  const conn = await pool.getConnection()
   try {
-    const [result] = await pool.execute(
+    await conn.beginTransaction()
+    const [result] = await conn.execute(
       `INSERT INTO clients (tenant_id, name, email, phone, status, plan, plan_end, photo,
-        weight, height, bmi, join_date, visits, visits_remaining)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        weight, height, bmi, join_date, visits, visits_remaining, direct_access, password)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [tenant_id, name, email, phone, status, plan, plan_end, photo,
-       weight, height, bmi, join_date || new Date().toISOString().split('T')[0], visits, visits_remaining ?? null]
+       weight, height, bmi, join_date || new Date().toISOString().split('T')[0],
+       visits, visits_remaining ?? null, direct_access, password || null]
     )
+    console.log('[POST /api/clients] cliente insertado, id:', result.insertId, 'password recibido:', password ? 'SÍ' : 'NO')
+
+    if (password) {
+      // INSERT IGNORE evita fallo si el email ya existe en users
+      const [uRows] = await conn.execute('SELECT id FROM users WHERE email = ?', [email])
+      if (uRows.length) {
+        // Ya existe → actualizar contraseña
+        await conn.execute('UPDATE users SET password = ?, name = ? WHERE email = ?', [password, name, email])
+      } else {
+        await conn.execute(
+          `INSERT INTO users (tenant_id, role_id, name, email, password) VALUES (?, ?, ?, ?, ?)`,
+          [tenant_id, 3, name, email, password]
+        )
+      }
+    }
+    await conn.commit()
     res.status(201).json({ id: result.insertId, ...req.body })
-  } catch (err) { console.error(err); res.status(500).json({ error: 'Error del servidor' }) }
+  } catch (err) { 
+    await conn.rollback()
+    console.error('[POST /api/clients] ERROR:', err.message)
+    res.status(500).json({ error: err.message || 'Error del servidor' })
+  } finally {
+    conn.release()
+  }
 })
 
 // PUT /api/clients/:id
 router.put('/:id', async (req, res) => {
   const allowed = ['name','email','phone','status','plan','plan_end','photo',
-                   'weight','height','bmi','visits','visits_remaining']
+                   'weight','height','bmi','visits','visits_remaining','direct_access', 'password']
   const sets = []; const vals = []
   for (const key of allowed) {
-    if (req.body[key] !== undefined) {
+    if (req.body[key] !== undefined && req.body[key] !== '') {
       sets.push(`${key} = ?`)
-      vals.push(req.body[key])
+      // Convertir boolean a 1 o 0 para direct_access si llega true/false
+      vals.push(key === 'direct_access' ? (req.body[key] ? 1 : 0) : req.body[key])
     }
   }
   if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' })
-  vals.push(parseInt(req.params.id))
+  
+  const conn = await pool.getConnection()
   try {
-    await pool.execute(`UPDATE clients SET ${sets.join(', ')} WHERE id = ?`, vals)
+    await conn.beginTransaction()
+    
+    vals.push(parseInt(req.params.id))
+    await conn.execute(`UPDATE clients SET ${sets.join(', ')} WHERE id = ?`, vals)
+    
+    if (req.body.password && req.body.email) {
+      const [uRows] = await conn.execute('SELECT id FROM users WHERE email = ?', [req.body.email])
+      if (uRows.length) {
+        await conn.execute('UPDATE users SET password = ? WHERE email = ?', [req.body.password, req.body.email])
+      } else {
+        await conn.execute(
+          `INSERT INTO users (tenant_id, role_id, name, email, password) VALUES (?, ?, ?, ?, ?)`,
+          [1, 3, req.body.name || 'Cliente', req.body.email, req.body.password]
+        )
+      }
+    }
+    
+    await conn.commit()
     res.json({ ok: true })
-  } catch (err) { console.error(err); res.status(500).json({ error: 'Error del servidor' }) }
+  } catch (err) { 
+    await conn.rollback()
+    console.error(err); 
+    res.status(500).json({ error: 'Error del servidor' }) 
+  } finally {
+    conn.release()
+  }
 })
 
 // DELETE /api/clients/:id

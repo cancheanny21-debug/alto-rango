@@ -101,6 +101,7 @@ export const useGymStore = defineStore('gym', () => {
   function canOpenDoor(client) {
     if (!accessControlEnabled.value) return { ok: false, reason: 'Control de acceso desactivado' }
     if (!client) return { ok: false, reason: 'Cliente no encontrado' }
+    if (client.direct_access) return { ok: true, reason: 'Acceso VIP/Libre' }
     if (client.status === 'frozen')   return { ok: false, reason: 'Membresía congelada' }
     if (client.status === 'expired' || client.status === 'completed') return { ok: false, reason: 'Membresía vencida o cumplida' }
     if (client.status !== 'active')   return { ok: false, reason: 'Membresía inactiva' }
@@ -108,7 +109,8 @@ export const useGymStore = defineStore('gym', () => {
       return { ok: false, reason: 'Membresía vencida por fecha' }
     }
     if (client.plan === 'Pospago por Tarjeta') {
-      if (client.visits_remaining == null || client.visits_remaining <= 0)
+      const visits = client.visits_remaining != null ? client.visits_remaining : 30
+      if (visits <= 0)
         return { ok: false, reason: 'Plan pospago cumplido (0 asistencias)' }
     }
     return { ok: true, reason: '' }
@@ -123,7 +125,8 @@ export const useGymStore = defineStore('gym', () => {
       // Actualizar visitas en BD
       const updates = { visits: (client.visits || 0) + 1 }
       if (client.plan === 'Pospago por Tarjeta') {
-        updates.visits_remaining = Math.max(0, (client.visits_remaining || 0) - 1)
+        const currentVisits = client.visits_remaining != null ? client.visits_remaining : 30
+        updates.visits_remaining = Math.max(0, currentVisits - 1)
         if (updates.visits_remaining === 0) updates.status = 'completed'
       }
       await api(`/clients/${clientId}`, { method: 'PUT', body: updates })
@@ -153,6 +156,14 @@ export const useGymStore = defineStore('gym', () => {
     await api(`/attendance/${id}`, { method: 'PUT', body: { status: 'verified' } })
     const r = attendance.value.find(a => a.id === id)
     if (r) r.status = 'verified'
+  }
+
+  async function toggleVerification(id) {
+    const r = attendance.value.find(a => a.id === id)
+    if (!r) return
+    const newStatus = r.status === 'verified' ? 'pending' : 'verified'
+    await api(`/attendance/${id}`, { method: 'PUT', body: { status: newStatus } })
+    r.status = newStatus
   }
 
   async function cancelAttendance(id) {
@@ -208,7 +219,7 @@ export const useGymStore = defineStore('gym', () => {
       plan: plan.name,
       plan_end: end.toISOString().split('T')[0],
       status: 'active',
-      visits_remaining: plan.limit_visits ?? null,
+      visits_remaining: plan.name.includes('Pospago') ? 30 : null,
     }
     await api(`/clients/${clientId}`, { method: 'PUT', body: updates })
     Object.assign(client, updates)
@@ -283,6 +294,18 @@ export const useGymStore = defineStore('gym', () => {
   }
 
   // ─── CRUD simples ──────────────────────────────────────
+  async function addClient(clientData) {
+    const created = await api('/clients', { method: 'POST', body: clientData })
+    clients.value.unshift(created)
+    return created
+  }
+
+  async function updateClient(id, updates) {
+    await api(`/clients/${id}`, { method: 'PUT', body: updates })
+    const c = clients.value.find(x => x.id === id)
+    if (c) Object.assign(c, updates)
+  }
+
   async function deletePlan(id) {
     await api(`/plans/${id}`, { method: 'DELETE' })
     plans.value = plans.value.filter(p => p.id !== id)
@@ -322,10 +345,10 @@ export const useGymStore = defineStore('gym', () => {
     saveClients, savePlans, saveProducts, saveEquipment, savePayments,
     savePromotions, saveAttendance, saveRoutines, saveSales,
     applyMembershipDiscount, getPlanByName, canOpenDoor, registerCheckin,
-    verifyAttendance, cancelAttendance, setAccessControl,
+    verifyAttendance, toggleVerification, cancelAttendance, setAccessControl,
     addPayment, changeClientPlan, renewMembership, freezeMembership, unfreezeMembership,
     togglePromotion, addPromotion, deletePromotion,
     addNotification, markNotificationsRead, recordSale,
-    deletePlan, deleteClient, deleteProduct, deleteEquipmentItem,
+    addClient, updateClient, deletePlan, deleteClient, deleteProduct, deleteEquipmentItem,
   }
 })

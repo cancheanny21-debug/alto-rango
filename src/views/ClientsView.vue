@@ -2,7 +2,7 @@
   <div>
     <div class="page-header">
       <div><h1>Clientes</h1><p class="page-subtitle">Gestiona los clientes del gimnasio</p></div>
-      <button class="btn btn-primary" @click="showModal = true">➕ Nuevo Cliente</button>
+      <button v-if="auth.isAdmin" class="btn btn-primary" @click="showModal = true">➕ Nuevo Cliente</button>
     </div>
 
     <div class="filter-bar">
@@ -15,20 +15,27 @@
 
     <div class="table-container">
       <table>
-        <thead><tr><th>Cliente</th><th>Email</th><th>Plan</th><th>Vence</th><th>Estado</th><th>Visitas</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Cliente</th><th>Email</th><th>Plan</th><th>Vence</th><th>Estado</th><th>Visitas</th><th v-if="auth.isAdmin">Verificación</th><th>Acciones</th></tr></thead>
         <tbody>
           <tr v-for="c in filtered" :key="c.id">
             <td><div style="display:flex;align-items:center;gap:10px"><span style="font-size:1.5rem">{{ c.photo }}</span><strong>{{ c.name }}</strong></div></td>
             <td>{{ c.email }}</td>
             <td>{{ c.plan }}</td>
-            <td>{{ c.planEnd }}</td>
+            <td>{{ formatDate(c.plan_end) }}</td>
             <td><span class="badge" :class="statusClass(c.status)">{{ statusLabel(c.status) }}</span></td>
             <td>{{ c.visits }}</td>
+            <td v-if="auth.isAdmin">
+              <label class="toggle-switch toggle-success" title="Abrir puerta remotamente">
+                <input type="checkbox" @change="remoteCheckin(c, $event)">
+                <span class="slider round"></span>
+              </label>
+            </td>
             <td>
-              <div style="display:flex;gap:6px">
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
                 <button class="btn btn-secondary btn-sm" @click="viewClient(c)">👁️</button>
-                <button class="btn btn-secondary btn-sm" @click="editClient(c)">✏️</button>
-                <button class="btn btn-danger btn-sm" @click="deleteClient(c.id)">🗑️</button>
+                <button v-if="auth.isAdmin" class="btn btn-secondary btn-sm" @click="editClient(c)">✏️</button>
+                <button v-if="auth.isAdmin && !c.password" class="btn btn-warning btn-sm" @click="openSetPassword(c)" title="Asignar contraseña">🔑</button>
+                <button v-if="auth.isAdmin" class="btn btn-danger btn-sm" @click="deleteClient(c.id)">🗑️</button>
               </div>
             </td>
           </tr>
@@ -42,7 +49,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2>{{ editing ? 'Editar' : 'Nuevo' }} Cliente</h2>
-          <button class="btn-icon" @click="showModal = false">✕</button>
+          <button class="modal-close-btn" @click="showModal = false">✕</button>
         </div>
         <form @submit.prevent="saveClient">
           <div class="form-row">
@@ -59,17 +66,37 @@
             <div class="form-group"><label>Peso (kg)</label><input v-model.number="form.weight" type="number" /></div>
             <div class="form-group"><label>Altura (cm)</label><input v-model.number="form.height" type="number" /></div>
           </div>
+          <div class="form-group">
+            <label>Contraseña (Para que el cliente acceda a la App)</label>
+            <input v-model="form.password" type="text" :required="!editing" :placeholder="editing ? 'Dejar en blanco para no cambiarla' : 'Ej: 123456'" />
+          </div>
           <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">{{ editing ? 'Guardar Cambios' : 'Registrar Cliente' }}</button>
         </form>
       </div>
     </div>
 
-    <!-- Modal Detalle -->
+    <!-- Modal Asignar contraseña rápida -->
+    <div v-if="showPassModal" class="modal-overlay" @click.self="showPassModal = false">
+      <div class="modal-content" style="max-width:420px">
+        <div class="modal-header">
+          <h2>🔑 Asignar Contraseña</h2>
+          <button class="modal-close-btn" @click="showPassModal = false">✕</button>
+        </div>
+        <div style="padding:8px 0 16px">
+          <p style="color:var(--text-muted);margin-bottom:16px">Cliente: <strong>{{ passClient?.name }}</strong> · {{ passClient?.email }}</p>
+          <div class="form-group">
+            <label>Nueva contraseña</label>
+            <input v-model="newPassword" type="text" placeholder="Ej: 123456" required />
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:12px" @click="savePassword" :disabled="!newPassword">✅ Guardar contraseña</button>
+        </div>
+      </div>
+    </div>
     <div v-if="showDetail" class="modal-overlay" @click.self="showDetail = false">
       <div class="modal-content">
         <div class="modal-header">
           <h2>Detalle del Cliente</h2>
-          <button class="btn-icon" @click="showDetail = false">✕</button>
+          <button class="modal-close-btn" @click="showDetail = false">✕</button>
         </div>
         <div style="text-align:center;margin-bottom:20px">
           <div style="font-size:4rem">{{ detailClient.photo }}</div>
@@ -80,12 +107,12 @@
           <div class="detail-item"><span class="detail-label">Email</span><span>{{ detailClient.email }}</span></div>
           <div class="detail-item"><span class="detail-label">Teléfono</span><span>{{ detailClient.phone }}</span></div>
           <div class="detail-item"><span class="detail-label">Plan</span><span>{{ detailClient.plan }}</span></div>
-          <div class="detail-item"><span class="detail-label">Vence</span><span>{{ detailClient.planEnd }}</span></div>
+          <div class="detail-item"><span class="detail-label">Vence</span><span>{{ detailClient.plan_end }}</span></div>
           <div class="detail-item"><span class="detail-label">Peso</span><span>{{ detailClient.weight }} kg</span></div>
           <div class="detail-item"><span class="detail-label">Altura</span><span>{{ detailClient.height }} cm</span></div>
           <div class="detail-item"><span class="detail-label">IMC</span><span>{{ detailClient.bmi }}</span></div>
           <div class="detail-item"><span class="detail-label">Visitas</span><span>{{ detailClient.visits }}</span></div>
-          <div class="detail-item"><span class="detail-label">Miembro desde</span><span>{{ detailClient.joinDate }}</span></div>
+          <div class="detail-item"><span class="detail-label">Miembro desde</span><span>{{ detailClient.join_date }}</span></div>
         </div>
         <div style="text-align:center;margin-top:20px;padding:20px;background:var(--bg-card);border-radius:var(--radius-sm);font-family:monospace;font-size:1.2rem;letter-spacing:4px">
           QR: {{ detailClient.name.replace(/\s/g,'').toUpperCase().slice(0,6) }}-{{ detailClient.id }}
@@ -99,8 +126,10 @@
 import { ref, computed } from 'vue'
 import { useGymStore } from '../stores/gym'
 import { useToastStore } from '../stores/toast'
+import { useAuthStore } from '../stores/auth'
 const gym = useGymStore()
 const toast = useToastStore()
+const auth = useAuthStore()
 
 const search = ref('')
 const filter = ref('Todos')
@@ -110,7 +139,7 @@ const editing = ref(null)
 const detailClient = ref({})
 const plans = computed(() => gym.plans.map(p => p.name))
 
-const emptyForm = { name: '', email: '', phone: '', plan: 'Mensual', weight: 70, height: 170 }
+const emptyForm = { name: '', email: '', phone: '', plan: 'Mensual', weight: 70, height: 170, password: '' }
 const form = ref({ ...emptyForm })
 
 const filtered = computed(() => {
@@ -125,6 +154,47 @@ const filtered = computed(() => {
 function statusClass(s) { return s === 'active' ? 'badge-success' : (s === 'expired' || s === 'completed') ? 'badge-danger' : 'badge-warning' }
 function statusLabel(s) { return { active: 'Activo', expired: 'Vencido', frozen: 'Congelado', completed: 'Cumplido' }[s] || s }
 
+function formatDate(dateStr) {
+  return dateStr ? dateStr.split('T')[0] : '—'
+}
+
+async function checkinClient(c) {
+  const res = await gym.registerCheckin(c.id)
+  if (res.success) toast.success(res.message)
+  else toast.error(res.message)
+}
+
+const showPassModal = ref(false)
+const passClient = ref(null)
+const newPassword = ref('')
+
+function openSetPassword(c) { passClient.value = c; newPassword.value = ''; showPassModal.value = true }
+
+async function savePassword() {
+  if (!passClient.value || !newPassword.value) return
+  await gym.updateClient(passClient.value.id, { password: newPassword.value, email: passClient.value.email, name: passClient.value.name })
+  passClient.value.password = newPassword.value
+  toast.success('Contraseña asignada a ' + passClient.value.name + '. Ya puede iniciar sesión.')
+  showPassModal.value = false
+}
+
+async function remoteCheckin(c, event) {
+  const isChecked = event.target.checked;
+  if (!isChecked) return; // Si lo apagan manualmente antes, no hacer nada
+
+  const res = await gym.registerCheckin(c.id);
+  if (res.success) {
+    toast.success('Puerta abierta para ' + c.name);
+    // Devolver el interruptor a su posición original después de 2 segundos
+    setTimeout(() => {
+      if (event.target) event.target.checked = false;
+    }, 2000);
+  } else {
+    toast.error(res.message);
+    event.target.checked = false; // Revertir si hay error (ej. plan vencido)
+  }
+}
+
 function viewClient(c) { detailClient.value = c; showDetail.value = true }
 function editClient(c) { editing.value = c.id; form.value = { ...c }; showModal.value = true }
 function deleteClient(id) {
@@ -132,12 +202,12 @@ function deleteClient(id) {
   toast.success('Cliente eliminado')
 }
 
-function saveClient() {
+async function saveClient() {
   if (editing.value) {
     const idx = gym.clients.findIndex(c => c.id === editing.value)
     if (idx >= 0) {
       const planChanged = gym.clients[idx].plan !== form.value.plan
-      gym.clients[idx] = { ...gym.clients[idx], ...form.value }
+      await gym.updateClient(editing.value, form.value)
       if (planChanged) gym.changeClientPlan(editing.value, form.value.plan, { registerPayment: false })
     }
     toast.success('Cliente actualizado')
@@ -147,19 +217,17 @@ function saveClient() {
     end.setDate(end.getDate() + (plan?.duration === 999 ? 365 : (plan?.duration || 30)))
     const newC = {
       ...form.value,
-      id: Date.now(),
       status: 'active',
       photo: '👤',
-      planEnd: end.toISOString().split('T')[0],
+      plan_end: end.toISOString().split('T')[0],
       bmi: +(form.value.weight / ((form.value.height / 100) ** 2)).toFixed(1),
-      joinDate: new Date().toISOString().split('T')[0],
+      join_date: new Date().toISOString().split('T')[0],
       visits: 0,
-      visitsRemaining: plan?.limit || null,
+      visits_remaining: form.value.plan.includes('Pospago') ? 30 : null,
     }
-    gym.clients.unshift(newC)
-    toast.success('Cliente registrado')
+    await gym.addClient(newC)
+    toast.success('Cliente registrado en base de datos')
   }
-  gym.saveClients()
   showModal.value = false; editing.value = null; form.value = { ...emptyForm }
 }
 </script>
@@ -168,4 +236,5 @@ function saveClient() {
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .detail-item { display: flex; flex-direction: column; padding: 8px 12px; background: var(--bg-card); border-radius: var(--radius-sm); }
 .detail-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px; }
+
 </style>

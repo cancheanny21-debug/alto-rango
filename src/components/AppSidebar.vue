@@ -1,7 +1,7 @@
 <template>
   <aside class="sidebar" :class="{ collapsed }">
     <div class="sidebar-brand">
-      <img src="/logo.jpeg" alt="Alto Rango" style="height: 32px; width: 32px; object-fit: contain; border-radius: 4px; flex-shrink: 0;" />
+      <img src="/logo.jpeg" alt="Alto Rango" style="height: 48px; width: 48px; object-fit: contain; border-radius: 8px; flex-shrink: 0;" />
       <transition name="fade">
         <span v-if="!collapsed" class="brand-name">Alto Rango</span>
       </transition>
@@ -15,10 +15,6 @@
         <span v-if="!collapsed && item.badge" class="nav-badge">{{ item.badge }}</span>
       </router-link>
     </nav>
-    <div class="sidebar-footer" @click="handleLogout">
-      <span class="nav-icon">🚪</span>
-      <transition name="fade"><span v-if="!collapsed" class="nav-label">Cerrar Sesión</span></transition>
-    </div>
   </aside>
 </template>
 
@@ -34,19 +30,31 @@ const auth = useAuthStore()
 const cart = useCartStore()
 
 const allItems = [
+  // Admin + Empleado
   { path: '/', icon: '📊', label: 'Dashboard', roles: ['admin', 'empleado'] },
-  { path: '/clientes', icon: '👥', label: 'Clientes', roles: ['admin'] },
+  { path: '/clientes', icon: '👥', label: 'Clientes', roles: ['admin', 'empleado'] },
   { path: '/membresias', icon: '💳', label: 'Membresías', roles: ['admin'] },
-  { path: '/asistencia', icon: '📋', label: 'Asistencia', roles: ['admin', 'empleado', 'usuario'] },
+  { path: '/cobros', icon: '💰', label: 'Cobros', roles: ['admin'] },
+  { path: '/ventas', icon: '🛒', label: 'Ventas', roles: ['admin', 'empleado'] },
+  { path: '/asistencia', icon: '✅', label: 'Asistencia', roles: ['admin', 'empleado'] },
   { path: '/entrenadores', icon: '🏋️', label: 'Entrenadores', roles: ['admin'] },
   { path: '/clases', icon: '📅', label: 'Clases', roles: ['admin', 'empleado'] },
-  { path: '/rutinas', icon: '📝', label: 'Rutinas', roles: ['admin', 'empleado', 'usuario'] },
-  { path: '/tienda', icon: '🛍️', label: 'Ventas', roles: ['admin', 'empleado'], badgeKey: 'cart' },
-  { path: '/inventario', icon: '📦', label: 'Inventario', roles: ['admin', 'empleado'] },
+  { path: '/rutinas', icon: '📝', label: 'Rutinas', roles: ['admin', 'empleado'] },
+  { path: '/tienda', icon: '🛍️', label: 'Tienda', roles: ['admin', 'empleado'], badgeKey: 'cart' },
+  { path: '/inventario', icon: '📦', label: 'Inventario', roles: ['admin'] },
   { path: '/reportes', icon: '📈', label: 'Reportes', roles: ['admin'] },
-  { path: '/perfil', icon: '👤', label: 'Mi perfil', roles: ['admin', 'empleado', 'usuario'] },
-  { path: '/configuracion', icon: '⚙️', label: 'Configuración', roles: ['admin', 'empleado'] },
-  { path: '/public-store', icon: '🌐', label: 'Tienda Pública', roles: ['admin', 'empleado', 'usuario'] },
+  { path: '/configuracion', icon: '⚙️', label: 'Configuración', roles: ['admin'] },
+  { path: '/perfil', icon: '👤', label: 'Mi perfil', roles: ['admin', 'empleado'] },
+  { path: '/public-store', icon: '🌐', label: 'Tienda Pública', roles: ['admin', 'empleado'] },
+  // Solo cliente (usuario)
+  { path: '/inicio-cliente', icon: '🏠', label: 'Inicio', roles: ['usuario'] },
+  { path: '/mi-membresia', icon: '💳', label: 'Mi membresía', roles: ['usuario'] },
+  { path: '/mis-asistencias', icon: '🕐', label: 'Mis asistencias', roles: ['usuario'] },
+  { path: '/clases', icon: '📅', label: 'Mis clases', roles: ['usuario'] },
+  { path: '/rutinas', icon: '🏋️', label: 'Mi rutina', roles: ['usuario'] },
+  { path: '/tienda', icon: '🛍️', label: 'Tienda', roles: ['usuario'], badgeKey: 'cart' },
+  { path: '/public-store', icon: '🌐', label: 'Tienda Pública', roles: ['usuario'] },
+  { path: '/perfil', icon: '👤', label: 'Mi perfil', roles: ['usuario'] },
 ]
 
 const menuItems = computed(() =>
@@ -57,8 +65,6 @@ const menuItems = computed(() =>
       badge: i.badgeKey === 'cart' ? (cart.totalItems || null) : null,
     }))
 )
-
-function handleLogout() { auth.logout(); router.push('/login') }
 </script>
 
 <style scoped>

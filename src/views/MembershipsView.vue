@@ -37,7 +37,7 @@
             <td><strong>{{ pr.name }}</strong><br><small style="color:var(--text-muted)">{{ pr.description }}</small></td>
             <td>{{ pr.type === 'percent' ? 'Porcentaje' : 'Monto fijo' }}</td>
             <td>{{ pr.type === 'percent' ? pr.value + '%' : '$' + pr.value }}</td>
-            <td>{{ pr.appliesTo }}</td>
+            <td>{{ formatAppliesTo(pr) }}</td>
             <td><span class="badge" :class="pr.active ? 'badge-success' : 'badge-warning'">{{ pr.active ? 'Activa' : 'Inactiva' }}</span></td>
             <td style="display:flex;gap:6px">
               <button class="btn btn-secondary btn-sm" @click="gym.togglePromotion(pr.id)">{{ pr.active ? 'Desactivar' : 'Activar' }}</button>
@@ -92,7 +92,7 @@
     <!-- Plan modal -->
     <div v-if="showPlanModal" class="modal-overlay" @click.self="showPlanModal = false">
       <div class="modal-content">
-        <div class="modal-header"><h2>{{ editingPlan ? 'Editar' : 'Nuevo' }} Plan</h2><button class="btn-icon" @click="showPlanModal = false">✕</button></div>
+        <div class="modal-header"><h2>{{ editingPlan ? 'Editar' : 'Nuevo' }} Plan</h2><button class="modal-close-btn" @click="showPlanModal = false">✕</button></div>
         <form @submit.prevent="savePlan">
           <div class="form-group"><label>Nombre</label><input v-model="planForm.name" required /></div>
           <div class="form-group">
@@ -120,7 +120,7 @@
     <!-- Change plan modal -->
     <div v-if="showChangeModal" class="modal-overlay" @click.self="showChangeModal = false">
       <div class="modal-content">
-        <div class="modal-header"><h2>Cambiar plan — {{ changeClient?.name }}</h2><button class="btn-icon" @click="showChangeModal = false">✕</button></div>
+        <div class="modal-header"><h2>Cambiar plan — {{ changeClient?.name }}</h2><button class="modal-close-btn" @click="showChangeModal = false">✕</button></div>
         <form @submit.prevent="saveChangePlan">
           <div class="form-group">
             <label>Nuevo plan</label>
@@ -144,7 +144,7 @@
     <!-- Payment modal -->
     <div v-if="showPayModal" class="modal-overlay" @click.self="showPayModal = false">
       <div class="modal-content">
-        <div class="modal-header"><h2>Registrar Cobro</h2><button class="btn-icon" @click="showPayModal = false">✕</button></div>
+        <div class="modal-header"><h2>Registrar Cobro</h2><button class="modal-close-btn" @click="showPayModal = false">✕</button></div>
         <form @submit.prevent="savePayment">
           <div class="form-group">
             <label>Cliente</label>
@@ -169,7 +169,7 @@
     <!-- Promo modal -->
     <div v-if="showPromoModal" class="modal-overlay" @click.self="showPromoModal = false">
       <div class="modal-content">
-        <div class="modal-header"><h2>Nueva promoción</h2><button class="btn-icon" @click="showPromoModal = false">✕</button></div>
+        <div class="modal-header"><h2>Nueva promoción</h2><button class="modal-close-btn" @click="showPromoModal = false">✕</button></div>
         <form @submit.prevent="savePromo">
           <div class="form-group"><label>Nombre</label><input v-model="promoForm.name" required /></div>
           <div class="form-group"><label>Descripción</label><input v-model="promoForm.description" /></div>
@@ -180,9 +180,28 @@
             </div>
             <div class="form-group"><label>Valor</label><input v-model.number="promoForm.value" type="number" required /></div>
           </div>
-          <div class="form-group">
-            <label>Aplica a</label>
-            <select v-model="promoForm.appliesTo"><option value="membresias">Membresías</option><option value="tienda">Tienda</option></select>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Aplica a</label>
+              <select v-model="promoForm.appliesTo" @change="promoForm.targetId = null">
+                <option value="membresias">Membresías</option>
+                <option value="tienda">Tienda</option>
+              </select>
+            </div>
+            <div class="form-group" v-if="promoForm.appliesTo === 'membresias'">
+              <label>Plan Específico</label>
+              <select v-model="promoForm.targetId">
+                <option :value="null">Todos los planes</option>
+                <option v-for="p in gym.plans" :key="p.id" :value="p.id">{{ p.name }}</option>
+              </select>
+            </div>
+            <div class="form-group" v-if="promoForm.appliesTo === 'tienda'">
+              <label>Producto Específico</label>
+              <select v-model="promoForm.targetId">
+                <option :value="null">Toda la tienda</option>
+                <option v-for="i in gym.inventory" :key="i.id" :value="i.id">{{ i.name }}</option>
+              </select>
+            </div>
           </div>
           <label style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
             <input type="checkbox" v-model="promoForm.active" /> Activar al crear
@@ -215,7 +234,7 @@ const showPayModal = ref(false)
 const payForm = ref({ clientId: null, concept: 'Cobro de membresía', amount: 0, method: 'Efectivo' })
 
 const showPromoModal = ref(false)
-const promoForm = ref({ name: '', description: '', type: 'percent', value: 10, appliesTo: 'membresias', active: true })
+const promoForm = ref({ name: '', description: '', type: 'percent', value: 10, appliesTo: 'membresias', targetId: null, active: true })
 
 const previewPrice = computed(() => {
   const plan = gym.getPlanByName(changePlanName.value)
@@ -228,6 +247,20 @@ function statusLabel(s) {
 }
 function statusBadge(s) {
   return { active: 'badge-success', expired: 'badge-danger', frozen: 'badge-warning', completed: 'badge-warning' }[s] || 'badge-warning'
+}
+
+function formatAppliesTo(pr) {
+  if (pr.appliesTo === 'membresias') {
+    if (!pr.targetId) return 'Todas las Membresías'
+    const p = gym.plans.find(x => x.id === pr.targetId)
+    return p ? `Membresía: ${p.name}` : 'Membresía Específica'
+  }
+  if (pr.appliesTo === 'tienda') {
+    if (!pr.targetId) return 'Toda la Tienda'
+    const i = gym.inventory.find(x => x.id === pr.targetId)
+    return i ? `Producto: ${i.name}` : 'Producto Específico'
+  }
+  return pr.appliesTo
 }
 
 function openPlanModal(p = null) {
@@ -296,6 +329,7 @@ function savePromo() {
   gym.addPromotion({ ...promoForm.value })
   toast.success('Promoción creada')
   showPromoModal.value = false
+  promoForm.value = { name: '', description: '', type: 'percent', value: 10, appliesTo: 'membresias', targetId: null, active: true }
 }
 </script>
 

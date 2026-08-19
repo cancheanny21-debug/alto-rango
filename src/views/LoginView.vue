@@ -20,12 +20,53 @@
           <button id="login-submit" type="submit" class="btn btn-primary btn-lg" style="width:100%">
             Iniciar Sesión
           </button>
+          
+          <div style="text-align: center; margin-top: 16px; display: flex; flex-direction: column; gap: 8px;">
+            <button type="button" class="btn btn-secondary btn-sm" @click="router.push('/public-store')" style="background: transparent; border-color: var(--border-color);">
+              🛒 Ver Tienda Online
+            </button>
+          </div>
+
           <div class="login-hint">
             <p><strong>Demo:</strong></p>
             <p>Admin: admin_norte@altorango.com / 123456</p>
-            <p>Recepción: recepcion_norte@altorango.com / 123456</p>
+            <p>Empleado: empleado_norte@altorango.com / 123456</p>
             <p>Usuario: usuario_norte@altorango.com / 123456</p>
           </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal de Registro de Usuario (RF-021, RF-020) -->
+    <div v-if="showRegisterModal" class="modal-overlay" @click.self="showRegisterModal = false">
+      <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+          <h2>Registro de Cliente</h2>
+          <button class="modal-close-btn" @click="showRegisterModal = false">✕</button>
+        </div>
+        <form @submit.prevent="handleRegister" class="login-form" style="margin-top: 16px;">
+          <div class="form-group">
+            <label>Nombre Completo</label>
+            <input v-model="regName" type="text" placeholder="Ej: Juan Pérez" required />
+          </div>
+          <div class="form-group">
+            <label>Correo electrónico</label>
+            <input v-model="regEmail" type="email" placeholder="tuemail@ejemplo.com" required />
+          </div>
+          <div class="form-group">
+            <label>Contraseña</label>
+            <input v-model="regPassword" type="password" placeholder="••••••••" required />
+          </div>
+          <div class="form-group">
+            <label>Sede (Gimnasio)</label>
+            <select v-model="regTenantId">
+              <option value="1">Alto Rango Norte</option>
+              <option value="2">Alto Rango Sur</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100%; margin-top: 16px;" :disabled="loadingReg">
+            {{ loadingReg ? 'Registrando...' : 'Completar Registro' }}
+          </button>
         </form>
       </div>
     </div>
@@ -44,6 +85,13 @@ const router = useRouter()
 const auth = useAuthStore()
 const toast = useToastStore()
 
+const showRegisterModal = ref(false)
+const regName = ref('')
+const regEmail = ref('')
+const regPassword = ref('')
+const regTenantId = ref('1')
+const loadingReg = ref(false)
+
 async function handleLogin() {
   const ok = await auth.login(email.value, password.value)
   if (ok) {
@@ -51,6 +99,38 @@ async function handleLogin() {
     router.push(auth.isUsuario ? '/asistencia' : '/')
   } else {
     toast.error('Credenciales incorrectas o usuario inactivo')
+  }
+}
+
+async function handleRegister() {
+  loadingReg.value = true
+  try {
+    const res = await fetch('http://localhost:3001/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tenant_id: Number(regTenantId.value),
+        name: regName.value,
+        email: regEmail.value,
+        password: regPassword.value
+      })
+    })
+    const data = await res.json()
+    if (res.ok) {
+      toast.success('Registro exitoso. Ahora puedes iniciar sesión.')
+      showRegisterModal.value = false
+      email.value = regEmail.value
+      password.value = regPassword.value
+      regName.value = ''
+      regEmail.value = ''
+      regPassword.value = ''
+    } else {
+      toast.error(data.error || 'Error al registrarse')
+    }
+  } catch (e) {
+    toast.error('Error de conexión con el servidor')
+  } finally {
+    loadingReg.value = false
   }
 }
 </script>

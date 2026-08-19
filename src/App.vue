@@ -1,9 +1,11 @@
 <template>
   <div class="app-wrapper" :class="{ 'app-wrapper--public': !showAppShell }">
     <template v-if="showAppShell">
-      <AppSidebar :collapsed="sidebarCollapsed" @toggle="sidebarCollapsed = !sidebarCollapsed" />
+      <!-- Overlay para cerrar sidebar en móvil -->
+      <div v-if="sidebarOpen" class="sidebar-overlay active" @click="sidebarOpen = false"></div>
+      <AppSidebar :collapsed="sidebarCollapsed" :class="{ 'sidebar-mobile-open': sidebarOpen }" @toggle="sidebarCollapsed = !sidebarCollapsed" />
       <div class="main-area" :class="{ collapsed: sidebarCollapsed }">
-        <AppHeader @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed" />
+        <AppHeader @toggle-sidebar="toggleSidebar" />
         <main class="main-content">
           <router-view />
         </main>
@@ -31,7 +33,17 @@ const auth = useAuthStore()
 const gym  = useGymStore()
 const route = useRoute()
 const sidebarCollapsed = ref(false)
+const sidebarOpen = ref(false)
 const showAppShell = computed(() => auth.isAuthenticated && !route.meta.public)
+
+function toggleSidebar() {
+  // En móvil abre/cierra el drawer; en desktop colapsa/expande
+  if (window.innerWidth <= 768) {
+    sidebarOpen.value = !sidebarOpen.value
+  } else {
+    sidebarCollapsed.value = !sidebarCollapsed.value
+  }
+}
 
 // Cargar datos cuando el usuario está autenticado
 onMounted(() => { if (auth.isAuthenticated) gym.loadAll() })
@@ -73,5 +85,17 @@ watch(() => auth.isAuthenticated, (val) => { if (val) gym.loadAll() })
 @media (max-width: 768px) {
   .main-area { margin-left: 0 !important; }
   .main-content { padding: 16px; }
+}
+
+/* Sidebar como drawer en móvil */
+@media (max-width: 768px) {
+  :deep(.sidebar) {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 51;
+  }
+  .sidebar-mobile-open :deep(.sidebar) {
+    transform: translateX(0);
+  }
 }
 </style>

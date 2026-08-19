@@ -146,10 +146,10 @@ const filtered = computed(() => {
   color: var(--text-muted);
 }
 .logo-img {
-  height: 48px;
-  width: 48px;
+  height: 70px;
+  width: 70px;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 .social-links {
   display: flex;

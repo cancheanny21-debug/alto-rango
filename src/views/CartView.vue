@@ -14,12 +14,12 @@
             <span style="font-size:0.8rem;color:var(--text-muted)">{{ item.category }}</span>
           </div>
           <div class="cart-item-qty">
-            <button class="btn-icon" @click="cart.updateQty(item.id, item.qty - 1)">−</button>
+            <button class="modal-close-btn" @click="cart.updateQty(item.id, item.qty - 1)">−</button>
             <span style="min-width:30px;text-align:center;font-weight:600">{{ item.qty }}</span>
-            <button class="btn-icon" @click="cart.updateQty(item.id, item.qty + 1)">+</button>
+            <button class="modal-close-btn" @click="cart.updateQty(item.id, item.qty + 1)">+</button>
           </div>
           <div class="cart-item-price">${{ (item.price * item.qty).toFixed(2) }}</div>
-          <button class="btn-icon" style="color:var(--danger)" @click="cart.removeItem(item.id)">🗑️</button>
+          <button class="modal-close-btn" style="color:var(--danger)" @click="cart.removeItem(item.id)">🗑️</button>
         </div>
       </div>
 

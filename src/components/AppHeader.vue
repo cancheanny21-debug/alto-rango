@@ -34,22 +34,32 @@
         <img v-if="auth.user?.photoUrl" :src="auth.user.photoUrl" class="avatar avatar-photo" alt="Foto de perfil" />
         <div v-else class="avatar">{{ auth.user?.avatar || 'A' }}</div>
       </router-link>
+      <button class="btn-icon header-logout-btn" @click="handleLogout" title="Cerrar Sesión" style="font-size: 1.5rem; padding: 6px 10px;">
+        🚪
+      </button>
     </div>
   </header>
 </template>
 
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
 import { useGymStore } from '../stores/gym'
 
 defineEmits(['toggle-sidebar'])
 
+const router = useRouter()
 const auth = useAuthStore()
 const cart = useCartStore()
 const gym = useGymStore()
 const showNotifs = ref(false)
+
+function handleLogout() {
+  auth.logout()
+  router.push('/login')
+}
 
 function toggleNotifs() {
   showNotifs.value = !showNotifs.value
@@ -112,6 +122,12 @@ const today = computed(() => new Date().toLocaleDateString('es-EC', { weekday: '
 @media (max-width: 768px) {
   .app-header { left: 0; padding: 0 16px; }
   .header-menu-btn { display: flex; }
+  .header-greeting p { display: none; }
+  .header-greeting h2 { font-size: 0.9rem; }
+}
+@media (max-width: 480px) {
+  .header-right { gap: 6px; }
+  .header-greeting h2 { display: none; }
 }
 
 .header-avatar-link {

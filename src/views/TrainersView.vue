@@ -26,7 +26,7 @@
     </div>
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
       <div class="modal-content">
-        <div class="modal-header"><h2>{{ editing ? 'Editar' : 'Nuevo' }} Entrenador</h2><button class="btn-icon" @click="showModal = false">✕</button></div>
+        <div class="modal-header"><h2>{{ editing ? 'Editar' : 'Nuevo' }} Entrenador</h2><button class="modal-close-btn" @click="showModal = false">✕</button></div>
         <form @submit.prevent="save">
           <div class="form-row"><div class="form-group"><label>Nombre</label><input v-model="form.name" required /></div><div class="form-group"><label>Especialidad</label><input v-model="form.specialty" required /></div></div>
           <div class="form-row"><div class="form-group"><label>Teléfono</label><input v-model="form.phone" /></div><div class="form-group"><label>Email</label><input v-model="form.email" type="email" /></div></div>

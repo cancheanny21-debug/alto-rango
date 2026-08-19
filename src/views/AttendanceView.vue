@@ -2,22 +2,23 @@
   <div>
     <div class="page-header">
       <div>
-        <h1>📋 Control de Asistencia</h1>
-        <p class="page-subtitle">Acceso por membresía vigente · plan pospago 30 asistencias</p>
+        <h1>📋 Control de Acceso y Asistencia</h1>
+        <p class="page-subtitle">Registro de acceso y Asistencias</p>
         <div style="margin-top: 8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center">
-          <div style="padding: 8px 16px; border-radius: 8px; font-weight: bold; display: inline-block"
-               :style="{ background: doorStatus === 'Abierta' ? '#dcfce7' : '#fee2e2', color: doorStatus === 'Abierta' ? '#166534' : '#991b1b' }">
-            🚪 Puerta: {{ doorStatus }}
-          </div>
+          <button v-if="auth.isEmpleado || auth.isAdmin || auth.isUsuario" class="btn btn-primary btn-sm" @click="showCheckin = true">
+            📱 Registrar Asistencia
+          </button>
           <span class="badge" :class="gym.accessControlEnabled ? 'badge-success' : 'badge-danger'">
             Control: {{ gym.accessControlEnabled ? 'Activo' : 'Desactivado' }}
           </span>
-          <button v-if="auth.canAccessControl" class="btn btn-secondary btn-sm" @click="toggleAccess">
+          <button v-if="auth.isEmpleado || auth.isAdmin" class="btn btn-secondary btn-sm" @click="toggleAccess">
             {{ gym.accessControlEnabled ? 'Desactivar control' : 'Activar control' }}
+          </button>
+          <button v-if="auth.isAdmin" class="btn btn-danger btn-sm" @click="directOpen">
+            🔑 Apertura Directa
           </button>
         </div>
       </div>
-      <button v-if="auth.canAccessControl || auth.isUsuario" class="btn btn-primary" @click="showCheckin = true">📱 Registrar Asistencia</button>
     </div>
 
     <div class="stats-grid">
@@ -31,8 +32,8 @@
         <thead><tr><th>Cliente</th><th>Fecha</th><th>Entrada</th><th>Salida</th><th>Estado</th><th v-if="auth.canAccessControl">Acciones</th></tr></thead>
         <tbody>
           <tr v-for="r in gym.attendance" :key="r.id" :class="{ cancelled: r.status === 'cancelled' }">
-            <td><strong>{{ r.client }}</strong></td>
-            <td>{{ r.date }}</td>
+            <td><strong>{{ r.client || r.client_name }}</strong></td>
+            <td>{{ r.date ? r.date.split('T')[0] : '—' }}</td>
             <td>{{ r.checkin }}</td>
             <td>{{ r.checkout || '—' }}</td>
             <td>
@@ -53,7 +54,7 @@
 
     <div v-if="showCheckin" class="modal-overlay" @click.self="showCheckin = false">
       <div class="modal-content" style="text-align:center">
-        <div class="modal-header"><h2>📱 Registrar Asistencia</h2><button class="btn-icon" @click="showCheckin = false">✕</button></div>
+        <div class="modal-header"><h2>📱 Registrar Asistencia</h2><button class="modal-close-btn" @click="showCheckin = false">✕</button></div>
         <div style="font-size:5rem;margin:20px 0;animation:pulse 1.5s ease infinite">📷</div>
         <p style="color:var(--text-muted);margin-bottom:16px">Solo se abre la puerta con membresía activa y vigente</p>
         <select v-model="selectedClientId" style="margin-bottom:16px">
@@ -106,8 +107,8 @@ function toggleAccess() {
   toast.info(gym.accessControlEnabled ? 'Control de acceso activado' : 'Control de acceso desactivado')
 }
 
-function registerAttendance() {
-  const result = gym.registerCheckin(Number(selectedClientId.value))
+async function registerAttendance() {
+  const result = await gym.registerCheckin(Number(selectedClientId.value))
   if (!result.success) {
     doorStatus.value = 'Cerrada'
     toast.error(result.message)
@@ -118,6 +119,12 @@ function registerAttendance() {
   toast.success(result.message)
   showCheckin.value = false
   selectedClientId.value = ''
+}
+
+function directOpen() {
+  doorStatus.value = 'Abierta'
+  setTimeout(() => { doorStatus.value = 'Cerrada' }, 3000)
+  toast.success('Puerta abierta manualmente')
 }
 
 function verify(r) {

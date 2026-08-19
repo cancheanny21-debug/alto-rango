@@ -33,7 +33,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2>Crear Nueva Rutina</h2>
-          <button class="btn-icon" @click="showModal = false">✕</button>
+          <button class="modal-close-btn" @click="showModal = false">✕</button>
         </div>
         <div class="form-group">
           <label>Nombre de la Rutina</label>

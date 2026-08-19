@@ -27,8 +27,9 @@ function initials(name) {
 
 function normalizeRole(raw, roleId) {
   const value = String(raw || '').toLowerCase().trim()
-  if (roleId === 1 || roleId === 2) return 'admin'
-  if (roleId === 3) return 'empleado'
+  if (roleId === 1) return 'admin'
+  if (roleId === 2) return 'empleado'
+  if (roleId === 3) return 'usuario'
   if (['admin', 'administrador', 'super admin', 'superadmin'].includes(value)) return 'admin'
   if (['empleado', 'encargado', 'recepcion', 'recepcionista'].includes(value)) return 'empleado'
   if (value === 'usuario') return 'usuario'
