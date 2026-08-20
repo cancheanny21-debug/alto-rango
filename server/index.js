@@ -67,5 +67,25 @@ app.listen(PORT, async () => {
     }
   }
 
+  // Asegurar que la columna facial_access existe en clients
+  try {
+    await pool.execute('ALTER TABLE clients ADD COLUMN facial_access BOOLEAN DEFAULT TRUE')
+    console.log('✅ Migración DB: Columna facial_access añadida a la tabla clients')
+  } catch (err) {
+    if (err.code !== 'ER_DUP_FIELDNAME') {
+      console.error('⚠️ Advertencia en migración DB (facial_access):', err.message)
+    }
+  }
+
+  // Asegurar que la columna face_descriptor existe en clients
+  try {
+    await pool.execute('ALTER TABLE clients ADD COLUMN face_descriptor TEXT DEFAULT NULL')
+    console.log('✅ Migración DB: Columna face_descriptor añadida a la tabla clients')
+  } catch (err) {
+    if (err.code !== 'ER_DUP_FIELDNAME') {
+      console.error('⚠️ Advertencia en migración DB (face_descriptor):', err.message)
+    }
+  }
+
   console.log(`🚀 API servidor corriendo en http://localhost:${PORT}/api`)
 })

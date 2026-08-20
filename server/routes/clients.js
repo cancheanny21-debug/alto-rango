@@ -25,17 +25,17 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   console.log('[POST /api/clients] body recibido:', JSON.stringify(req.body))
   const { tenant_id = 1, name, email, phone, status = 'active', plan, plan_end, photo = '👤',
-          weight, height, bmi, join_date, visits = 0, visits_remaining, direct_access = 0, password } = req.body
+          weight, height, bmi, join_date, visits = 0, visits_remaining, direct_access = 0, password, facial_access = 1, face_descriptor = null } = req.body
   const conn = await pool.getConnection()
   try {
     await conn.beginTransaction()
     const [result] = await conn.execute(
       `INSERT INTO clients (tenant_id, name, email, phone, status, plan, plan_end, photo,
-        weight, height, bmi, join_date, visits, visits_remaining, direct_access, password)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        weight, height, bmi, join_date, visits, visits_remaining, direct_access, password, facial_access, face_descriptor)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [tenant_id, name, email, phone, status, plan, plan_end, photo,
        weight, height, bmi, join_date || new Date().toISOString().split('T')[0],
-       visits, visits_remaining ?? null, direct_access, password || null]
+       visits, visits_remaining ?? null, direct_access, password || null, facial_access, face_descriptor]
     )
     console.log('[POST /api/clients] cliente insertado, id:', result.insertId, 'password recibido:', password ? 'SÍ' : 'NO')
 
@@ -66,13 +66,13 @@ router.post('/', async (req, res) => {
 // PUT /api/clients/:id
 router.put('/:id', async (req, res) => {
   const allowed = ['name','email','phone','status','plan','plan_end','photo',
-                   'weight','height','bmi','visits','visits_remaining','direct_access', 'password']
+                   'weight','height','bmi','visits','visits_remaining','direct_access', 'password', 'facial_access', 'face_descriptor']
   const sets = []; const vals = []
   for (const key of allowed) {
     if (req.body[key] !== undefined && req.body[key] !== '') {
       sets.push(`${key} = ?`)
-      // Convertir boolean a 1 o 0 para direct_access si llega true/false
-      vals.push(key === 'direct_access' ? (req.body[key] ? 1 : 0) : req.body[key])
+      // Convertir boolean a 1 o 0 para direct_access y facial_access
+      vals.push(key === 'direct_access' || key === 'facial_access' ? (req.body[key] ? 1 : 0) : req.body[key])
     }
   }
   if (!sets.length) return res.status(400).json({ error: 'Nada que actualizar' })

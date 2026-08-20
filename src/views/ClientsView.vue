@@ -2,7 +2,11 @@
   <div>
     <div class="page-header">
       <div><h1>Clientes</h1><p class="page-subtitle">Gestiona los clientes del gimnasio</p></div>
-      <button v-if="auth.isAdmin" class="btn btn-primary" @click="showModal = true">➕ Nuevo Cliente</button>
+      <div style="display:flex;gap:12px">
+        <button v-if="auth.isAdmin" class="btn btn-secondary" @click="$router.push('/kiosk')">👁️ Modo Kiosco</button>
+        <button v-if="auth.isAdmin" class="btn btn-warning" @click="openDoorManual">🚪 Abrir Puerta Manual</button>
+        <button v-if="auth.isAdmin" class="btn btn-primary" @click="showModal = true">➕ Nuevo Cliente</button>
+      </div>
     </div>
 
     <div class="filter-bar">
@@ -15,7 +19,7 @@
 
     <div class="table-container">
       <table>
-        <thead><tr><th>Cliente</th><th>Email</th><th>Plan</th><th>Vence</th><th>Estado</th><th>Visitas</th><th v-if="auth.isAdmin">Verificación</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Cliente</th><th>Email</th><th>Plan</th><th>Vence</th><th>Estado</th><th>Visitas</th><th v-if="auth.isAdmin">Acceso Facial</th><th v-if="auth.isAdmin">Verificación</th><th>Acciones</th></tr></thead>
         <tbody>
           <tr v-for="c in filtered" :key="c.id">
             <td><div style="display:flex;align-items:center;gap:10px"><span style="font-size:1.5rem">{{ c.photo }}</span><strong>{{ c.name }}</strong></div></td>
@@ -24,6 +28,12 @@
             <td>{{ formatDate(c.plan_end) }}</td>
             <td><span class="badge" :class="statusClass(c.status)">{{ statusLabel(c.status) }}</span></td>
             <td>{{ c.visits }}</td>
+            <td v-if="auth.isAdmin">
+              <label class="toggle-switch" title="Permiso de Acceso Facial">
+                <input type="checkbox" :checked="!!c.facial_access" @change="toggleFacialAccess(c, $event)">
+                <span class="slider round"></span>
+              </label>
+            </td>
             <td v-if="auth.isAdmin">
               <label class="toggle-switch toggle-success" title="Abrir puerta remotamente">
                 <input type="checkbox" @change="remoteCheckin(c, $event)">
@@ -34,6 +44,7 @@
               <div style="display:flex;gap:6px;flex-wrap:wrap">
                 <button class="btn btn-secondary btn-sm" @click="viewClient(c)">👁️</button>
                 <button v-if="auth.isAdmin" class="btn btn-secondary btn-sm" @click="editClient(c)">✏️</button>
+                <button v-if="auth.isAdmin" class="btn btn-secondary btn-sm" @click="openFaceScan(c)" title="Escanear Rostro">📸</button>
                 <button v-if="auth.isAdmin && !c.password" class="btn btn-warning btn-sm" @click="openSetPassword(c)" title="Asignar contraseña">🔑</button>
                 <button v-if="auth.isAdmin" class="btn btn-danger btn-sm" @click="deleteClient(c.id)">🗑️</button>
               </div>
@@ -92,6 +103,25 @@
         </div>
       </div>
     </div>
+    <!-- Modal Escanear Rostro -->
+    <div v-if="showFaceModal" class="modal-overlay" @click.self="closeFaceScan">
+      <div class="modal-content" style="max-width:500px">
+        <div class="modal-header">
+          <h2>📸 Escanear Rostro: {{ scanClient?.name }}</h2>
+          <button class="modal-close-btn" @click="closeFaceScan">✕</button>
+        </div>
+        <div style="padding:16px 0; text-align:center">
+          <p v-if="scanStatus">{{ scanStatus }}</p>
+          <div style="position:relative; width:100%; max-width:400px; margin:0 auto; background:#000; border-radius:8px; overflow:hidden;">
+            <video ref="scanVideoEl" autoplay muted playsinline style="width:100%; display:block; filter: brightness(150%) contrast(120%);"></video>
+          </div>
+          <button class="btn btn-primary" style="margin-top:16px; width:100%" @click="captureFace" :disabled="!modelsLoaded">
+            Capturar y Guardar Rostro
+          </button>
+        </div>
+      </div>
+    </div>
+    
     <div v-if="showDetail" class="modal-overlay" @click.self="showDetail = false">
       <div class="modal-content">
         <div class="modal-header">
@@ -124,9 +154,13 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useGymStore } from '../stores/gym'
 import { useToastStore } from '../stores/toast'
 import { useAuthStore } from '../stores/auth'
+import * as faceapi from '@vladmandic/face-api'
+
+const router = useRouter()
 const gym = useGymStore()
 const toast = useToastStore()
 const auth = useAuthStore()
@@ -180,6 +214,18 @@ async function savePassword() {
   showPassModal.value = false
 }
 
+async function openDoorManual() {
+  const res = await gym.openDoorDirectly(auth.user?.id || 1);
+  if (res.success) toast.success(res.message);
+  else toast.error(res.message);
+}
+
+async function toggleFacialAccess(c, event) {
+  const newVal = event.target.checked;
+  await gym.updateClient(c.id, { facial_access: newVal ? 1 : 0 });
+  toast.success(`Acceso facial ${newVal ? 'activado' : 'desactivado'} para ${c.name}`);
+}
+
 async function remoteCheckin(c, event) {
   const isChecked = event.target.checked;
   if (!isChecked) return; // Si lo apagan manualmente antes, no hacer nada
@@ -194,6 +240,57 @@ async function remoteCheckin(c, event) {
   } else {
     toast.error(res.message);
     event.target.checked = false; // Revertir si hay error (ej. plan vencido)
+  }
+}
+
+// Lógica Escaneo Facial
+const showFaceModal = ref(false)
+const scanClient = ref(null)
+const scanVideoEl = ref(null)
+const scanStatus = ref('')
+const modelsLoaded = ref(false)
+let scanStream = null
+
+async function openFaceScan(c) {
+  scanClient.value = c
+  showFaceModal.value = true
+  scanStatus.value = 'Cargando cámara y modelos...'
+  modelsLoaded.value = false
+  
+  try {
+    await faceapi.nets.ssdMobilenetv1.loadFromUri('/models')
+    await faceapi.nets.faceLandmark68Net.loadFromUri('/models')
+    await faceapi.nets.faceRecognitionNet.loadFromUri('/models')
+    modelsLoaded.value = true
+    scanStatus.value = 'Modelos cargados. Asegúrate de tener buena iluminación.'
+    
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+    if (scanVideoEl.value) scanVideoEl.value.srcObject = scanStream
+  } catch (err) {
+    scanStatus.value = 'Error al iniciar: ' + err.message
+  }
+}
+
+function closeFaceScan() {
+  if (scanStream) scanStream.getTracks().forEach(t => t.stop())
+  showFaceModal.value = false
+  scanClient.value = null
+}
+
+async function captureFace() {
+  if (!scanVideoEl.value) return
+  scanStatus.value = 'Analizando rostro...'
+  
+  const detection = await faceapi.detectSingleFace(scanVideoEl.value).withFaceLandmarks().withFaceDescriptor()
+  
+  if (detection) {
+    const descriptor = Array.from(detection.descriptor)
+    await gym.updateClient(scanClient.value.id, { face_descriptor: JSON.stringify(descriptor) })
+    toast.success('Rostro guardado correctamente para ' + scanClient.value.name)
+    closeFaceScan()
+  } else {
+    scanStatus.value = 'No se detectó un rostro claro. Intenta acercarte o mejorar la luz.'
+    toast.error('No se pudo detectar el rostro')
   }
 }
 

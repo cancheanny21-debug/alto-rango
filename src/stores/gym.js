@@ -203,6 +203,23 @@ export const useGymStore = defineStore('gym', () => {
     accessControlEnabled.value = enabled
   }
 
+  async function openDoorDirectly(adminId = 1) {
+    try {
+      const res = await api('/attendance/direct-open', { method: 'POST', body: { admin_id: adminId } })
+      
+      addNotification({
+        type: 'checkin',
+        title: 'Apertura Manual',
+        message: 'Puerta abierta remotamente',
+        detail: `Hora: ${nowTime()}`
+      })
+      
+      return { success: true, message: res.message || 'Puerta abierta manualmente' }
+    } catch (err) {
+      return { success: false, message: err.message }
+    }
+  }
+
   // ─── Pagos ─────────────────────────────────────────────
   async function addPayment({ clientId, concept, amount, method }) {
     const client = clients.value.find(c => c.id === clientId)
@@ -376,7 +393,7 @@ export const useGymStore = defineStore('gym', () => {
     saveClients, savePlans, saveProducts, saveEquipment, savePayments,
     savePromotions, saveAttendance, saveRoutines, saveSales,
     applyMembershipDiscount, getPlanByName, canOpenDoor, registerCheckin,
-    verifyAttendance, toggleVerification, cancelAttendance, setAccessControl,
+    verifyAttendance, toggleVerification, cancelAttendance, setAccessControl, openDoorDirectly,
     addPayment, changeClientPlan, renewMembership, freezeMembership, unfreezeMembership,
     togglePromotion, addPromotion, deletePromotion,
     addNotification, markNotificationsRead, recordSale,

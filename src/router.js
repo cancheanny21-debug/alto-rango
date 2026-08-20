@@ -1,4 +1,4 @@
-﻿import { createRouter, createWebHashHistory } from "vue-router"
+import { createRouter, createWebHashHistory } from "vue-router"
 import { useAuthStore } from "./stores/auth"
 import { pinia } from "./stores/pinia"
 
@@ -20,6 +20,7 @@ const routes = [
   { path: "/inventario", name: "Inventario", component: () => import("./views/InventoryView.vue"), meta: { roles: ["admin"] } },
   { path: "/reportes", name: "Reportes", component: () => import("./views/ReportsView.vue"), meta: { roles: ["admin"] } },
   { path: "/configuracion", name: "Configuracion", component: () => import("./views/SettingsView.vue"), meta: { roles: ["admin"] } },
+  { path: "/kiosk", name: "Kiosk", component: () => import("./views/KioskView.vue"), meta: { roles: ["admin", "empleado"] } },
   { path: "/rutinas", name: "Rutinas", component: () => import("./views/RoutinesView.vue"), meta: { roles: ["admin", "empleado", "usuario"] } },
   { path: "/perfil", name: "Perfil", component: () => import("./views/ProfileView.vue"), meta: { roles: ["admin", "empleado", "usuario"] } },
   { path: "/public-store", name: "PublicStore", component: () => import("./views/PublicStoreView.vue"), meta: { public: true } },

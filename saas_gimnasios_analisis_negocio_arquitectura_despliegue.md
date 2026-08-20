@@ -326,7 +326,8 @@ Opciones:
 - QR.
 - RFID.
 - Huella.
-- Reconocimiento facial.
+- Reconocimiento facial (Kiosco interactivo con `face-api.js`, filtrado y optimización para baja luminosidad).
+- Control de cerradura de puerta remota a través de red inalámbrica y WebSockets con integración ESP32.
 
 ---
 
