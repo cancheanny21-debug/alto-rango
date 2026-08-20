@@ -47,7 +47,7 @@ router.post('/check-access', async (req, res) => {
 
     // 2. Verificar membresía activa
     const [memberships] = await pool.execute(`
-      SELECT m.id, m.remaining_accesses, p.name as plan_name, c.personal_data
+      SELECT m.id, m.remaining_accesses, p.name as plan_name, c.name, c.email
       FROM memberships m
       JOIN plans p ON m.plan_id = p.id
       JOIN clients c ON m.client_id = c.id
@@ -59,7 +59,6 @@ router.post('/check-access', async (req, res) => {
     }
 
     const membership = memberships[0]
-    const personalData = JSON.parse(membership.personal_data || '{}')
 
     // RF-010: Control del plan pospago por tarjeta (30 asistencias)
     if (membership.remaining_accesses !== null) {
@@ -73,7 +72,7 @@ router.post('/check-access', async (req, res) => {
     // RF-008: Registrar asistencia
     await pool.execute(
       'INSERT INTO attendance (client_id, client_name, date, checkin, status) VALUES (?,?,CURRENT_DATE,CURRENT_TIME,?)',
-      [client_id, personalData.name || 'Cliente', 'completed']
+      [client_id, membership.name || 'Cliente', 'completed']
     )
 
     res.json({ allowed: true, message: 'Acceso concedido. Puerta abierta.' })

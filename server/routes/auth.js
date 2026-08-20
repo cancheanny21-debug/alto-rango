@@ -69,8 +69,8 @@ router.post('/register', async (req, res) => {
 
     // Crear entrada en clients
     await pool.execute(
-      'INSERT INTO clients (tenant_id, personal_data) VALUES (?, ?)',
-      [tenant_id, JSON.stringify({ name, email })]
+      'INSERT INTO clients (tenant_id, name, email) VALUES (?, ?, ?)',
+      [tenant_id, name, email]
     )
 
     res.status(201).json({ success: true, message: 'Usuario registrado exitosamente', userId: result.insertId })

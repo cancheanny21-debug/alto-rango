@@ -7,7 +7,7 @@ const router = Router()
 router.get('/', async (req, res) => {
   try {
     const [rows] = await pool.execute(`
-      SELECT s.*, u.name as employee_name, c.personal_data 
+      SELECT s.*, u.name as employee_name, c.name as client_name, c.email as client_email 
       FROM sales s 
       LEFT JOIN users u ON s.user_id = u.id 
       LEFT JOIN clients c ON s.client_id = c.id
